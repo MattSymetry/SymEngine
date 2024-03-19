@@ -17,44 +17,42 @@ public:
 private:
 
 	//glfw-related variables
-	int width;
-	int height;
-	SDL_Window* window;
+	int m_width;
+	int m_height;
+	SDL_Window* m_window;
 
 	//instance-related variables
-	vk::Instance instance{ nullptr };
-	vk::DebugUtilsMessengerEXT debugMessenger{ nullptr };
-	vk::DispatchLoaderDynamic dldi;
-	vk::SurfaceKHR surface;
+	vk::Instance m_instance{ nullptr };
+	vk::DebugUtilsMessengerEXT m_debugMessenger{ nullptr };
+	vk::DispatchLoaderDynamic m_dldi;
+	vk::SurfaceKHR m_surface;
 
 	//device-related variables
-	vk::PhysicalDevice physicalDevice{ nullptr };
-	vk::Device device{ nullptr };
-	vk::Queue graphicsQueue{ nullptr };
-	vk::Queue presentQueue{ nullptr };
-	vk::SwapchainKHR swapchain{ nullptr };
-	std::vector<vkUtil::SwapChainFrame> swapchainFrames;
-	vk::Format swapchainFormat;
-	vk::Extent2D swapchainExtent;
+	vk::PhysicalDevice m_physicalDevice{ nullptr };
+	vk::Device m_device{ nullptr };
+	vk::Queue m_graphicsQueue{ nullptr };
+	vk::Queue m_presentQueue{ nullptr };
+	vk::SwapchainKHR m_swapchain{ nullptr };
+	std::vector<vkUtil::SwapChainFrame> m_swapchainFrames;
+	vk::Format m_swapchainFormat;
+	vk::Extent2D m_swapchainExtent;
 
 	//pipeline-related variables
-	std::vector<pipelineType> pipelineTypes =  {pipelineType::COMPUTE} ;
-	std::unordered_map<pipelineType, vk::PipelineLayout> pipelineLayout;
-	std::unordered_map<pipelineType, vk::Pipeline> pipeline;
+	std::vector<pipelineType> m_pipelineTypes =  {pipelineType::COMPUTE} ;
+	std::unordered_map<pipelineType, vk::PipelineLayout> m_pipelineLayout;
+	std::unordered_map<pipelineType, vk::Pipeline> m_pipeline;
 
 	//descriptor-related variables
-	std::unordered_map<pipelineType, vk::DescriptorSetLayout> frameSetLayout;
-	std::unordered_map<pipelineType, vk::DescriptorPool> frameDescriptorPool; //Descriptors bound on a "per frame" basis
+	std::unordered_map<pipelineType, vk::DescriptorSetLayout> m_frameSetLayout;
+	std::unordered_map<pipelineType, vk::DescriptorPool> m_frameDescriptorPool; //Descriptors bound on a "per frame" basis
 
 	//Command-related variables
-	vk::CommandPool commandPool;
-	vk::CommandBuffer mainCommandBuffer;
-	vk::Fence mainFence;
+	vk::CommandPool m_commandPool;
+	vk::CommandBuffer m_mainCommandBuffer;
+	vk::Fence m_mainFence;
 
 	//Synchronization objects
-	int maxFramesInFlight, frameNumber;
-
-	//asset pointers
+	int m_maxFramesInFlight, m_frameNumber;
 
 	//instance setup
 	void make_instance();

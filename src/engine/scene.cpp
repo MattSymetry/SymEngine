@@ -2,12 +2,12 @@
 
 Scene::Scene()
 {
-    _camera = Camera(glm::vec3(0.0f, 453.0f, 0.0f), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0f, 0.0f, 0.0f), 2.5f);
+    m_camera = Camera(glm::vec3(0.0f, 453.0f, 0.0f), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0f, 0.0f, 0.0f), 2.5f);
     description = {};
-    description.camera_position = _camera.getPosition();
-    description.camera_forward = _camera.getForward();
-    description.camera_up = _camera.getUp();
-    description.camera_right = _camera.getRight();
+    description.camera_position = m_camera.getPosition();
+    description.camera_forward = m_camera.getForward();
+    description.camera_up = m_camera.getUp();
+    description.camera_right = m_camera.getRight();
     description.sphereCount = 20;
     description.boxCount = 0;
     description.coneCount = 0;
@@ -59,41 +59,41 @@ void Scene::KeyPressed(SDL_Keycode key) {
 }
 
 void Scene::KeyboardInput(Uint8* state) {
-    float cameraSpeed = 0.5f * _deltaTime / 1000;
+    float cameraSpeed = 0.5f * m_deltaTime / 1000;
     if (state[SDL_SCANCODE_W]) {
-        _camera.MoveForward(cameraSpeed);
+        m_camera.MoveForward(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_S]) {
-		_camera.MoveBackward(cameraSpeed);
+        m_camera.MoveBackward(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_A]) {
-		_camera.MoveLeft(cameraSpeed);
+        m_camera.MoveLeft(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_D]) {
-		_camera.MoveRight(cameraSpeed);
+        m_camera.MoveRight(cameraSpeed);
     }
     if (state[SDL_SCANCODE_SPACE]) {
-		_camera.MoveUp(cameraSpeed);
+        m_camera.MoveUp(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_LSHIFT]) {
-		_camera.MoveDown(cameraSpeed);
+        m_camera.MoveDown(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_LEFT]) {
-		_camera.RotateLeft(cameraSpeed);
+        m_camera.RotateLeft(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_RIGHT]) {
-		_camera.RotateRight(cameraSpeed);
+        m_camera.RotateRight(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_UP]) {
-		_camera.RotateUp(cameraSpeed);
+        m_camera.RotateUp(cameraSpeed);
 	}
     if (state[SDL_SCANCODE_DOWN]) {
-		_camera.RotateDown(cameraSpeed);
+        m_camera.RotateDown(cameraSpeed);
     }
 }
 
 void Scene::Update(int deltaTime) {
-    _deltaTime = deltaTime;
+    m_deltaTime = deltaTime;
     frameCount ++;
     //std::cout << "forward: " << frameCount << std::endl;
 

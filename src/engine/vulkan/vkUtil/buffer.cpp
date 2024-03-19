@@ -11,16 +11,16 @@ Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size
 	input.size = size;
 	input.usage = vk::BufferUsageFlagBits::eTransferSrc;
 	vkUtil::BufferOutputChunk  chunk = vkUtil::createBuffer(input);
-	stagingBuffer = chunk.buffer;
-	stagingMemory = chunk.memory;
-	stagingSize = chunk.size;
+    stagingBuffer = chunk.buffer;
+    stagingMemory = chunk.memory;
+    stagingSize = chunk.size;
 
 	//Make Device Buffer
 	input.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
 	input.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
 	chunk = vkUtil::createBuffer(input);
-	buffer = chunk.buffer;
-	deviceMemory = chunk.memory;
+    buffer = chunk.buffer;
+    deviceMemory = chunk.memory;
 	size = chunk.size;
 
 	create_resources(logicalDevice);
@@ -30,18 +30,18 @@ void Buffer::create_resources(vk::Device logicalDevice) {
 
 	writeLocation = logicalDevice.mapMemory(stagingMemory, 0, stagingSize);
 
-	descriptor.buffer = buffer;
-	descriptor.offset = 0;
-	descriptor.range = stagingSize;
+    descriptor.buffer = buffer;
+    descriptor.offset = 0;
+    descriptor.range = stagingSize;
 
 }
 
-void Buffer::blit(void* data, size_t _size, vk::Queue queue, vk::CommandBuffer commandBuffer, vk::Fence fence) {
+void Buffer::blit(void* data, size_t size, vk::Queue queue, vk::CommandBuffer commandBuffer, vk::Fence fence) {
 
-	memcpy(writeLocation, data, _size);
+	memcpy(writeLocation, data, size);
 
 	vkUtil::copyBuffer(
-		stagingBuffer, buffer, _size,
+                       stagingBuffer, buffer, size,
 		queue, commandBuffer, fence
 	);
 

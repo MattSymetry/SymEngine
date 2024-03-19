@@ -3,18 +3,18 @@
 
 class Camera {
 private: 
-	glm::vec3 _position;
-	glm::vec3 _target;
-	glm::vec3 _roll;
-	glm::vec3 _up = glm::vec3(0.0f, 1.0f, 0.0f);
-	glm::vec3 _right = glm::vec3(1.0f, 0.0f, 0.0f);
-	glm::vec3 _forward = glm::vec3(0.0f, 0.0f, -1.0f);
-	float _fov;
-	float _yaw;
-	float _pitch;
-	float _rollAngle;
-	float _speed;
-	float _sensitivity;
+	glm::vec3 m_position;
+	glm::vec3 m_target;
+	glm::vec3 m_roll;
+	glm::vec3 m_up = glm::vec3(0.0f, 1.0f, 0.0f);
+	glm::vec3 m_right = glm::vec3(1.0f, 0.0f, 0.0f);
+	glm::vec3 m_forward = glm::vec3(0.0f, 0.0f, -1.0f);
+	float m_fov;
+	float m_yaw;
+	float m_pitch;
+	float m_rollAngle;
+	float m_speed;
+	float m_sensitivity;
 public:
 	Camera();
 	Camera(glm::vec3 position, glm::vec3 target, glm::vec3 roll, float fov);

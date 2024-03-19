@@ -32,8 +32,8 @@ public:
     void KeyboardInput(Uint8* state);
     
 private:
-    Camera _camera;
-    int _deltaTime;
+    Camera m_camera;
+    int m_deltaTime;
     void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr);
     void SetupObjects();
     void UpdateObjectData();

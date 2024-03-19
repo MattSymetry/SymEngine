@@ -39,13 +39,13 @@ namespace vkInit {
 		void reset_descriptor_set_layouts();
 
 	private:
-		vk::Device device;
-		vk::ComputePipelineCreateInfo pipelineInfo = {};
+		vk::Device m_device;
+		vk::ComputePipelineCreateInfo m_pipelineInfo = {};
 
-		vk::ShaderModule computeShader = nullptr;
-		vk::PipelineShaderStageCreateInfo computeShaderInfo;
+		vk::ShaderModule m_computeShader = nullptr;
+		vk::PipelineShaderStageCreateInfo m_computeShaderInfo;
 
-		std::vector<vk::DescriptorSetLayout> descriptorSetLayouts;
+		std::vector<vk::DescriptorSetLayout> m_descriptorSetLayouts;
 
 		void reset_shader_modules();
 
