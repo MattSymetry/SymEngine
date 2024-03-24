@@ -4,6 +4,16 @@ project ("SymEngine")
 
 set(CMAKE_CXX_STANDARD 17)
 
+include(FetchContent)
+
+FetchContent_Declare(
+  glslang
+  GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
+  GIT_TAG        5755de46b07e4374c05fb1081f65f7ae1f8cca81 # Use the specific commit you mentioned
+)
+
+FetchContent_MakeAvailable(glslang)
+
 add_subdirectory(third_party)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/$<CONFIG>)
@@ -24,23 +34,12 @@ add_subdirectory(src/editor)
 find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/bin /usr/local/bin $ENV{VULKAN_SDK}/Bin/ $ENV{VULKAN_SDK}/Bin32/)
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/shaders/*.comp")
-source_group("Shader" FILES ${GLSL_SOURCE_FILES})
+source_group(TREE "${PROJECT_SOURCE_DIR}/shaders" FILES ${GLSL_SOURCE_FILES})
+add_custom_target(Shaders SOURCES ${GLSL_SOURCE_FILES})
 
 foreach(GLSL ${GLSL_SOURCE_FILES})
-  message(STATUS "BUILDING SHADER")
-  get_filename_component(FILE_NAME ${GLSL} NAME)
-  set(SPIRV "${PROJECT_SOURCE_DIR}/shaders/${FILE_NAME}.spv")
-  message(STATUS ${GLSL})
-  add_custom_command(
-    OUTPUT ${SPIRV}
-    COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
-    DEPENDS ${GLSL})
-  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+  list(APPEND GLSL_FILES ${GLSL})
 endforeach(GLSL)
 
-add_custom_target(
-    Shaders 
-    DEPENDS ${SPIRV_BINARY_FILES}
-    )
 
-set(SPIRV_BINARY_FILES ${SPIRV_BINARY_FILES} CACHE INTERNAL "List of SPIR-V binary files")
+set(GLSL_FILES ${GLSL_FILES} CACHE INTERNAL "List of SPIR-V binary files")

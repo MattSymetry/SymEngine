@@ -1,0 +1,44 @@
+#version 450
+layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout (binding = 0, rgba8) uniform image2D colorBuffer; // frame image
+layout(set = 0, binding = 2) uniform timeUniform {int myInt;} unscaledTime; // time
+float time = float(unscaledTime.myInt) / 40.0;
+
+struct Transform {
+    vec4 position;
+    vec4 rotation;
+    vec4 scale;
+};
+
+struct Object {
+    Transform transform;
+    vec4 posi;
+};
+
+layout(std140, binding = 3) readonly buffer ObjectBuffer { // object data
+    Object objects[];
+} objectData;
+
+struct Camera {
+    vec3 position;
+    vec3 forwards;
+    vec3 right;
+    vec3 up;
+};
+
+layout(set = 0, binding = 1) uniform UBO {
+    vec3 camera_forward;
+    vec3 camera_right;
+    vec3 camera_up;
+    vec3 camera_position;
+    int sphereCount;
+    int boxCount;
+    int coneCount;
+} SceneData;
+
+float dot2( in vec2 v ) { return dot(v,v); }
+float dot2( in vec3 v ) { return dot(v,v); }
+float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
+ivec2 screen_size = imageSize(colorBuffer);
+ivec2 gi = ivec2(gl_GlobalInvocationID.xy);
+ivec2 screen_pos = ivec2(gi.x, gi.y);

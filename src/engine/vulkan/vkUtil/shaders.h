@@ -1,22 +1,15 @@
 #pragma once
 #include "../../../common/config.h"
+#include <glslang/Include/glslang_c_interface.h>
 
 namespace vkUtil {
-
-	/**
-		Read a file.
-
-		\param filename a string representing the path to the file
-		\returns the contents as a vector of raw binary characters
-	*/
+    glslang_resource_t get_default_resource();
 	std::vector<char> readFile(std::string filename);
+    
+    std::vector<uint32_t> compileShaderSourceToSpirv(const std::string& shaderSource, const std::string& inputFilename, glslang_stage_t shaderStage);
+    
+    std::vector<char> prepareShader();
+    std::vector<char> endShader();
 
-	/**
-		Make a shader module.
-
-		\param filename a string holding the filepath to the spir-v file.
-		\param device the logical device
-		\returns the created shader module
-	*/
 	vk::ShaderModule createModule(std::string filename, vk::Device device);
 }

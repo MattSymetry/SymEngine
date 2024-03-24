@@ -121,11 +121,9 @@ void Engine::make_descriptor_set_layouts(Scene* scene) {
 }
 
 void Engine::make_pipelines() {
-
-	//Raytracing
 	vkInit::ComputePipelineBuilder computePipelineBuilder(m_device);
 
-	computePipelineBuilder.specify_compute_shader("/shaders/symScene.comp.spv");
+	computePipelineBuilder.specify_compute_shader("/shaders/scene.comp");
 	computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
 
 	vkInit::ComputePipelineOutBundle computeOutput = computePipelineBuilder.build();
@@ -135,7 +133,6 @@ void Engine::make_pipelines() {
 	computePipelineBuilder.reset();
 
 	vkInit::PipelineBuilder pipelineBuilder(m_device);
-
 }
 
 void Engine::finalize_setup(Scene* scene) {
