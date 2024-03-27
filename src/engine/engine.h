@@ -13,6 +13,8 @@ public:
 	~Engine();
 
 	void render(Scene* scene);
+    
+    void immediate_submit(std::function<void(vk::CommandBuffer cmd)>&& function);
 
 private:
 
@@ -53,9 +55,18 @@ private:
 
 	//Synchronization objects
 	int m_maxFramesInFlight, m_frameNumber;
+    
+    // immidiate submit structs
+    vk::Fence m_immFence;
+    vk::CommandBuffer m_immCommandBuffer;
+    vk::CommandPool m_immCommandPool;
+    vk::DescriptorPool m_imguiPool;
 
 	//instance setup
 	void make_instance();
+    
+    // imgui
+    void init_imgui();
 
 	//device setup
 	void make_device(Scene* scene);
@@ -78,6 +89,12 @@ private:
 	void prepare_to_trace_barrier(vk::CommandBuffer commandBuffer, vk::Image image);
 	void dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex);
 	void prepare_to_present_barrier(vk::CommandBuffer commandBuffer, vk::Image image);
+    
+    vk::RenderingAttachmentInfoKHR attachment_info(
+        vk::ImageView view, vk::ClearValue* clear, vk::ImageLayout layout);
+    vk::RenderingInfoKHR rendering_info(
+        vk::Extent2D renderExtent, vk::RenderingAttachmentInfoKHR* colorAttachment, vk::RenderingAttachmentInfoKHR* depthAttachment);
+    void draw_imgui(vk::CommandBuffer cmd, vk::ImageView targetImageView);
 
 	//Cleanup functions
 	void cleanup_swapchain();

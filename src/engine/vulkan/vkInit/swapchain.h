@@ -282,6 +282,7 @@ namespace vkInit {
 				logicalDevice, images[i], format.format, vk::ImageAspectFlagBits::eColor,
 				vk::ImageViewType::e2D, 1
 			);
+            // TODO add drawImage shit
 		}
 
 		bundle.format = format.format;

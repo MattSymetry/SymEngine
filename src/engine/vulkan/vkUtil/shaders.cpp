@@ -204,7 +204,7 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
     input.target_language = GLSLANG_TARGET_SPV;
     // SPIR-V 1.5 has been released on September 13th, 2019 to accompany the launch of Vulkan 1.2
     // However, Vulkan 1.1 requires Spir-V 1.3, go with 1.3 to match the Vulkan 1.1 target above:
-    input.target_language_version = GLSLANG_TARGET_SPV_1_5;
+    input.target_language_version = GLSLANG_TARGET_SPV_1_3;
     input.code = shaderCode;
     input.default_version = 100;
     input.default_profile = GLSLANG_NO_PROFILE;

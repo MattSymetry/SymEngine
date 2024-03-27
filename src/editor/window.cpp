@@ -1,6 +1,9 @@
 #include "window.h"
 #include <thread>
 #include <functional>
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_vulkan.h"
 
 using namespace std;
 Window::Window(int width, int height, bool debug)
@@ -39,19 +42,19 @@ void Window::setupSDLWindow(int width, int height)
 void Window::run() {
     bool bQuit = false;
     render = true;
-    std::thread renderThread(std::bind(&Window::renderLoop, this));
+    //std::thread renderThread(std::bind(&Window::renderLoop, this));
 
     
     while (!bQuit)
     {
         // Events
-       if (SDL_WaitEvent(&e)) {
+       if (SDL_PollEvent(&e)) {
             
             if (e.type == SDL_QUIT)
             {
                 bQuit = true;
                 render = false;
-                renderThread.join();
+               // renderThread.join();
             }
             else if (e.type == SDL_KEYDOWN)
             {
@@ -67,12 +70,31 @@ void Window::run() {
                 }
             }
 
-            SDL_PumpEvents();
+            /*SDL_PumpEvents();
             const Uint8* state = SDL_GetKeyboardState(NULL);
-            _scene->KeyboardInput((Uint8*)state);
+            _scene->KeyboardInput((Uint8*)state);*/
 
-            //SDL_Delay(6);saddddc
+           ImGui_ImplSDL2_ProcessEvent(&e);
        }
+
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL2_NewFrame(_window);
+        ImGui::NewFrame();
+        ImGui::Begin("Test Window"); // Begin a new window with the title "Test Window"
+
+        if (ImGui::Button("Random Test Button")) {
+            // This code executes when the button is pressed
+            // You can put any logic here, like printing a message, triggering a function, etc.
+            std::cout << "Button Pressed!" << std::endl;
+        }
+
+        ImGui::End(); // End the window
+        ImGui::Render();
+        
+        _engine->render(_scene);
+        _scene->Update(_deltaTime);
+        calcFramerate();
+        SDL_Delay(1);
     }
 }
 

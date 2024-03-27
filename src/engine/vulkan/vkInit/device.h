@@ -65,7 +65,11 @@ namespace vkInit {
 		* the swapchain extension
 		*/
 		const std::vector<const char*> requestedExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            "VK_KHR_portability_subset",
+            "VK_KHR_create_renderpass2",
+            "VK_KHR_depth_stencil_resolve",
+            "VK_KHR_dynamic_rendering"
 		};
 
 		vkLogging::Logger::get_logger()->print("We are requesting device extensions:");
@@ -192,30 +196,27 @@ namespace vkInit {
 		* Device extensions to be requested:
 		*/
 		std::vector<const char*> deviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            "VK_KHR_portability_subset",
+            "VK_KHR_create_renderpass2",
+            "VK_KHR_depth_stencil_resolve",
+            "VK_KHR_dynamic_rendering"
 		};
 
-		/*
-		* VULKAN_HPP_CONSTEXPR DeviceCreateInfo( VULKAN_HPP_NAMESPACE::DeviceCreateFlags flags_                         = {},
-                                           uint32_t                                queueCreateInfoCount_          = {},
-                                           const VULKAN_HPP_NAMESPACE::DeviceQueueCreateInfo * pQueueCreateInfos_ = {},
-                                           uint32_t                                            enabledLayerCount_ = {},
-                                           const char * const * ppEnabledLayerNames_                              = {},
-                                           uint32_t             enabledExtensionCount_                            = {},
-                                           const char * const * ppEnabledExtensionNames_                          = {},
-                                           const VULKAN_HPP_NAMESPACE::PhysicalDeviceFeatures * pEnabledFeatures_ = {} )
-		*/
 		std::vector<const char*> enabledLayers;
 		if (vkLogging::Logger::get_logger()->get_debug_mode()) {
 			enabledLayers.push_back("VK_LAYER_KHRONOS_validation");
 		}
+        vk::PhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures{};
+        dynamicRenderingFeatures.dynamicRendering = VK_TRUE;
+        
 		vk::DeviceCreateInfo deviceInfo = vk::DeviceCreateInfo(
 			vk::DeviceCreateFlags(), 
 			static_cast<uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),
 			static_cast<uint32_t>(enabledLayers.size()), enabledLayers.data(),
 			static_cast<uint32_t>(deviceExtensions.size()), deviceExtensions.data(),
 			&deviceFeatures
-		);
+        ).setPNext(&dynamicRenderingFeatures);
 
 		try {
 			vk::Device device = physicalDevice.createDevice(deviceInfo);

@@ -37,6 +37,10 @@ namespace vkUtil {
 
 		//Write Operations
 		std::vector<vk::WriteDescriptorSet> writeOps;
+        
+        vk::DescriptorSet m_drawImageDescriptors;
+        vk::DescriptorSetLayout m_drawImageDescriptorLayout;
+        //AllocatedImage m_drawImage;
 
 		SwapChainFrame(vk::PhysicalDevice physicalDevice, vk::Device logicalDevice, 
 			uint32_t width, uint32_t height);
@@ -51,5 +55,9 @@ namespace vkUtil {
 
 		void destroy();
 	};
+    
+    VkRenderingInfo rendering_info(VkExtent2D swapchainExtent, VkRenderingAttachmentInfo* colorAttachment, VkRenderingAttachmentInfo* depthAttachment);
+    
+    void transition_image(VkCommandBuffer cmdBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 }
