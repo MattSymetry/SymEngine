@@ -3,6 +3,7 @@
 #include "vulkan/vkUtil/frame.h"
 #include "scene.h"
 #include "vulkan/vkJob/job.h"
+#include <functional>
 
 class Engine {
 

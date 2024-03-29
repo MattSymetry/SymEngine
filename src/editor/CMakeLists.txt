@@ -12,7 +12,7 @@ file(GLOB_RECURSE EDITOR_HEADERS "*.h" "*.hpp")
 
 add_executable(SymEngineEditor ${EDITOR_SOURCES} ${EDITOR_HEADERS})
 
-target_link_libraries(SymEngineEditor SymEngine)
+#target_link_libraries(SymEngineEditor SymEngine)
 
 target_link_libraries(SymEngineEditor glm imgui)
 

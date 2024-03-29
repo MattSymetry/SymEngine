@@ -8,7 +8,7 @@ file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 source_group("Shader" FILES ${GLSL_SOURCE_FILES})
-add_library(SymEngine SHARED ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES})
+add_executable(SymEngine ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES})
 
 foreach(GLSL_FILE ${GLSL_FILES})
     get_filename_component(FILE_NAME ${GLSL_FILE} NAME)

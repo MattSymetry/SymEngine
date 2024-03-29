@@ -65,11 +65,7 @@ namespace vkInit {
 		* the swapchain extension
 		*/
 		const std::vector<const char*> requestedExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            "VK_KHR_portability_subset",
-            "VK_KHR_create_renderpass2",
-            "VK_KHR_depth_stencil_resolve",
-            "VK_KHR_dynamic_rendering"
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 
 		vkLogging::Logger::get_logger()->print("We are requesting device extensions:");
@@ -196,11 +192,7 @@ namespace vkInit {
 		* Device extensions to be requested:
 		*/
 		std::vector<const char*> deviceExtensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            "VK_KHR_portability_subset",
-            "VK_KHR_create_renderpass2",
-            "VK_KHR_depth_stencil_resolve",
-            "VK_KHR_dynamic_rendering"
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 
 		std::vector<const char*> enabledLayers;
