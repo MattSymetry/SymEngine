@@ -67,6 +67,8 @@ void Window::run() {
                     cout << "Window resized" << endl;
                     _width = e.window.data1;
                     _height = e.window.data2;
+                    ImGuiIO& io = ImGui::GetIO();
+                    io.DisplaySize = ImVec2(static_cast<float>(_width), static_cast<float>(_height));
                 }
             }
 

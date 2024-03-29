@@ -34,11 +34,11 @@ Engine::Engine(int width, int height, SDL_Window* window, Scene* scene) {
 
 void Engine::make_instance() {
 
-    m_instance = vkInit::make_instance("ID Tech 12", m_window);
-    m_dldi = vk::DispatchLoaderDynamic(m_instance, vkGetInstanceProcAddr);
+	m_instance = vkInit::make_instance("ID Tech 12", m_window);
+	m_dldi = vk::DispatchLoaderDynamic(m_instance, vkGetInstanceProcAddr);
 	VkSurfaceKHR c_style_surface;
 	if (SDL_Vulkan_CreateSurface(m_window, m_instance, &c_style_surface) != SDL_TRUE) {
-        std::cerr << "SDL_Vulkan_CreateSurface failed: " << SDL_GetError() << std::endl;
+		std::cerr << "SDL_Vulkan_CreateSurface failed: " << SDL_GetError() << std::endl;
 		vkLogging::Logger::get_logger()->print("Failed to abstract SDL surface for Vulkan.");
 	}
 	else {
@@ -46,17 +46,17 @@ void Engine::make_instance() {
 			"Successfully abstracted SDL surface for Vulkan.");
 	}
 	//copy constructor converts to hpp convention
-    m_surface = c_style_surface;
+	m_surface = c_style_surface;
 }
 
 void Engine::make_device(Scene* scene) {
-    m_physicalDevice = vkInit::choose_physical_device(m_instance);;
-    m_device = vkInit::create_logical_device(m_physicalDevice, m_surface);
+	m_physicalDevice = vkInit::choose_physical_device(m_instance);;
+	m_device = vkInit::create_logical_device(m_physicalDevice, m_surface);
 	std::array<vk::Queue, 2> queues = vkInit::get_queues(m_physicalDevice, m_device, m_surface);
-    m_graphicsQueue = queues[0];
-    m_presentQueue = queues[1];
+	m_graphicsQueue = queues[0];
+	m_presentQueue = queues[1];
 	make_swapchain(scene);
-    m_frameNumber = 0;
+	m_frameNumber = 0;
 }
 
 /**
@@ -64,13 +64,13 @@ void Engine::make_device(Scene* scene) {
 */
 void Engine::make_swapchain(Scene* scene) {
 	vkInit::SwapChainBundle bundle = vkInit::create_swapchain(
-            m_device, m_physicalDevice, m_surface, m_width, m_height, scene
+		m_device, m_physicalDevice, m_surface, m_width, m_height, scene
 	);
-    m_swapchain = bundle.swapchain;
-    m_swapchainFrames = bundle.frames;
-    m_swapchainFormat = bundle.format;
-    m_swapchainExtent = bundle.extent;
-    m_maxFramesInFlight = static_cast<int>(m_swapchainFrames.size());
+	m_swapchain = bundle.swapchain;
+	m_swapchainFrames = bundle.frames;
+	m_swapchainFormat = bundle.format;
+	m_swapchainExtent = bundle.extent;
+	m_maxFramesInFlight = static_cast<int>(m_swapchainFrames.size());
 	for (vkUtil::SwapChainFrame& frame : m_swapchainFrames) {
 		frame.logicalDevice = m_device;
 		frame.physicalDevice = m_physicalDevice;
@@ -85,14 +85,14 @@ void Engine::make_swapchain(Scene* scene) {
 */
 void Engine::recreate_swapchain(Scene* scene) {
     std::cout << "Recreating swapchain" << std::endl;
-    m_width = 0;
-    m_height = 0;
+	m_width = 0;
+	m_height = 0;
 	while (m_width == 0 || m_height == 0) {
-        SDL_GetWindowSize(m_window, &m_width, &m_height);
-        SDL_Delay(10);
+		SDL_GetWindowSize(m_window, &m_width, &m_height);
+		SDL_Delay(10);
 	}
 
-    m_device.waitIdle();
+	m_device.waitIdle();
 
 	cleanup_swapchain();
 	make_swapchain(scene);
@@ -122,7 +122,7 @@ void Engine::make_descriptor_set_layouts(Scene* scene) {
 		index++;
 	}
 
-    m_frameSetLayout[pipelineType::COMPUTE] = vkInit::make_descriptor_set_layout(m_device, bindings);
+	m_frameSetLayout[pipelineType::COMPUTE] = vkInit::make_descriptor_set_layout(m_device, bindings);
 
 }
 
@@ -134,8 +134,8 @@ void Engine::make_pipelines() {
 
 	vkInit::ComputePipelineOutBundle computeOutput = computePipelineBuilder.build();
 
-    m_pipelineLayout[pipelineType::COMPUTE] = computeOutput.layout;
-    m_pipeline[pipelineType::COMPUTE] = computeOutput.pipeline;
+	m_pipelineLayout[pipelineType::COMPUTE] = computeOutput.layout;
+	m_pipeline[pipelineType::COMPUTE] = computeOutput.pipeline;
 	computePipelineBuilder.reset();
 
 	vkInit::PipelineBuilder pipelineBuilder(m_device);
@@ -143,15 +143,15 @@ void Engine::make_pipelines() {
 
 void Engine::finalize_setup(Scene* scene) {
 
-    m_commandPool = vkInit::make_command_pool(m_device, m_physicalDevice, m_surface);
+	m_commandPool = vkInit::make_command_pool(m_device, m_physicalDevice, m_surface);
     m_immCommandPool = vkInit::make_command_pool(m_device, m_physicalDevice, m_surface);
 
 	vkInit::commandBufferInputChunk commandBufferInput = { m_device, m_commandPool, m_swapchainFrames };
     vkInit::commandBufferInputChunk immCommandBufferInput = { m_device, m_immCommandPool, m_swapchainFrames };
-    m_mainCommandBuffer = vkInit::make_command_buffer(commandBufferInput);
+	m_mainCommandBuffer = vkInit::make_command_buffer(commandBufferInput);
     m_immCommandBuffer = vkInit::make_command_buffer(immCommandBufferInput);
     
-    m_mainFence = vkInit::make_fence(m_device);
+	m_mainFence = vkInit::make_fence(m_device);
     m_immFence = vkInit::make_fence(m_device);
 	vkInit::make_frame_command_buffers(commandBufferInput);
 
@@ -164,12 +164,12 @@ void Engine::make_frame_resources(Scene* scene) {
 	vkInit::descriptorSetLayoutData bindings;
 	bindings.count = scene->buffers.size() + 1;
 	bindings.types.push_back(vk::DescriptorType::eStorageImage);
-    
-    for (BufferInitParams buff : scene->buffers) {
-        bindings.types.push_back(buff.descriptorType);
-    }
 
-    m_frameDescriptorPool[pipelineType::COMPUTE] = vkInit::make_descriptor_pool(m_device, static_cast<uint32_t>(m_swapchainFrames.size()), bindings);
+	for (BufferInitParams buff : scene->buffers) {
+		bindings.types.push_back(buff.descriptorType);
+	}
+
+	m_frameDescriptorPool[pipelineType::COMPUTE] = vkInit::make_descriptor_pool(m_device, static_cast<uint32_t>(m_swapchainFrames.size()), bindings);
 
 	for (vkUtil::SwapChainFrame& frame : m_swapchainFrames) {
 
@@ -290,12 +290,12 @@ void Engine::draw_imgui(vk::CommandBuffer cmd, vk::ImageView targetImageView)
 void Engine::prepare_frame(uint32_t imageIndex, Scene* scene) {
 
 	vkUtil::SwapChainFrame& frame = m_swapchainFrames[imageIndex];
-    
-    for (auto& bufferSetup : frame.bufferSetups) {
-        m_device.waitForFences(1, &m_mainFence, VK_TRUE, UINT64_MAX);
-        m_device.resetFences(1, &m_mainFence);
-        bufferSetup.buffer.blit((void*)bufferSetup.dataPtr, bufferSetup.dataSize, m_graphicsQueue, m_mainCommandBuffer, m_mainFence);
-    }
+
+	for (auto& bufferSetup : frame.bufferSetups) {
+		m_device.waitForFences(1, &m_mainFence, VK_TRUE, UINT64_MAX);
+		m_device.resetFences(1, &m_mainFence);
+		bufferSetup.buffer.blit((void*)bufferSetup.dataPtr, bufferSetup.dataSize, m_graphicsQueue, m_mainCommandBuffer, m_mainFence);
+	}
 
 	frame.write_descriptor_set();
 }
@@ -373,83 +373,85 @@ void Engine::prepare_to_present_barrier(vk::CommandBuffer commandBuffer, vk::Ima
 }
 
 void Engine::render(Scene* scene) {
-    m_device.waitForFences(1, &(m_swapchainFrames[m_frameNumber].inFlight), VK_TRUE, UINT64_MAX);
-    m_device.resetFences(1, &(m_swapchainFrames[m_frameNumber].inFlight));
+	m_device.waitForFences(1, &(m_swapchainFrames[m_frameNumber].inFlight), VK_TRUE, UINT64_MAX);
+	m_device.resetFences(1, &(m_swapchainFrames[m_frameNumber].inFlight));
 
-    uint32_t imageIndex;
-    try {
-        vk::ResultValue<uint32_t> acquire = m_device.acquireNextImageKHR(
-            m_swapchain, UINT64_MAX,
-            m_swapchainFrames[m_frameNumber].imageAvailable, nullptr
-        );
-        imageIndex = acquire.value;
-    } catch (vk::OutOfDateKHRError error) {
-        std::cout << "Recreate" << std::endl;
-        recreate_swapchain(scene);
-        return;
-    } catch (vk::IncompatibleDisplayKHRError error) {
-        std::cout << "Recreate" << std::endl;
-        recreate_swapchain(scene);
-        return;
-    } catch (vk::SystemError error) {
-        std::cout << "Failed to acquire swapchain image!" << std::endl;
-        return;
-    }
+	uint32_t imageIndex;
+	try {
+		vk::ResultValue acquire = m_device.acquireNextImageKHR(
+			m_swapchain, UINT64_MAX,
+			m_swapchainFrames[m_frameNumber].imageAvailable, nullptr
+		);
+		imageIndex = acquire.value;
+	}
+	catch (vk::OutOfDateKHRError error) {
+		std::cout << "Recreate" << std::endl;
+		recreate_swapchain(scene);
+		return;
+	}
+	catch (vk::IncompatibleDisplayKHRError error) {
+		std::cout << "Recreate" << std::endl;
+		recreate_swapchain(scene);
+		return;
+	}
+	catch (vk::SystemError error) {
+		std::cout << "Failed to acquire swapchain image!" << std::endl;
+	}
 
-    //prepare_frame(imageIndex, scene);
+	prepare_frame(imageIndex, scene);
 
-    vk::CommandBuffer commandBuffer = m_swapchainFrames[m_frameNumber].commandBuffer;
-    commandBuffer.reset();
-    vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    commandBuffer.begin(beginInfo);
-    
-    
+	vk::CommandBuffer commandBuffer = m_swapchainFrames[m_frameNumber].commandBuffer;
+	commandBuffer.reset();
+	vk::CommandBufferBeginInfo beginInfo = {};
+	try {
+		commandBuffer.begin(beginInfo);
+	}
+	catch (vk::SystemError err) {
+		vkLogging::Logger::get_logger()->print("Failed to begin recording command buffer!");
+	}
 	prepare_to_trace_barrier(commandBuffer, m_swapchainFrames[imageIndex].image);
 	dispatch_compute(commandBuffer, imageIndex);
-    
-    vk::ImageMemoryBarrier barrierToRendering = {};
-    barrierToRendering.oldLayout = vk::ImageLayout::eGeneral; // Assuming this was the layout after compute
-    barrierToRendering.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    barrierToRendering.srcAccessMask = vk::AccessFlagBits::eShaderWrite; // After compute shader writes
-    barrierToRendering.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Before color attachment writes
-    barrierToRendering.image = m_swapchainFrames[imageIndex].image;
-    barrierToRendering.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-    barrierToRendering.subresourceRange.baseMipLevel = 0;
-    barrierToRendering.subresourceRange.levelCount = 1;
-    barrierToRendering.subresourceRange.baseArrayLayer = 0;
-    barrierToRendering.subresourceRange.layerCount = 1;
+	vk::ImageMemoryBarrier barrierToRendering = {};
+	barrierToRendering.oldLayout = vk::ImageLayout::eGeneral; // Assuming this was the layout after compute
+	barrierToRendering.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	barrierToRendering.srcAccessMask = vk::AccessFlagBits::eShaderWrite; // After compute shader writes
+	barrierToRendering.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Before color attachment writes
+	barrierToRendering.image = m_swapchainFrames[imageIndex].image;
+	barrierToRendering.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	barrierToRendering.subresourceRange.baseMipLevel = 0;
+	barrierToRendering.subresourceRange.levelCount = 1;
+	barrierToRendering.subresourceRange.baseArrayLayer = 0;
+	barrierToRendering.subresourceRange.layerCount = 1;
 
-    // Insert the pipeline barrier
-    commandBuffer.pipelineBarrier(
-        vk::PipelineStageFlagBits::eComputeShader, // Wait for compute shader
-        vk::PipelineStageFlagBits::eColorAttachmentOutput, // Before starting color attachment output
-        vk::DependencyFlags(),
-        0, nullptr, // No memory barriers
-        0, nullptr, // No buffer barriers
-        1, &barrierToRendering // Image barrier
-    );
-    draw_imgui(commandBuffer,  m_swapchainFrames[imageIndex].imageView);
-    
-    vk::ImageMemoryBarrier barrierToPresent = {};
-    barrierToPresent.oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    barrierToPresent.newLayout = vk::ImageLayout::ePresentSrcKHR;
-    barrierToPresent.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-    barrierToPresent.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
-    barrierToPresent.image = m_swapchainFrames[imageIndex].image;
-    barrierToPresent.subresourceRange = barrierToRendering.subresourceRange;
+	// Insert the pipeline barrier
+	commandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eComputeShader, // Wait for compute shader
+		vk::PipelineStageFlagBits::eColorAttachmentOutput, // Before starting color attachment output
+		vk::DependencyFlags(),
+		0, nullptr, // No memory barriers
+		0, nullptr, // No buffer barriers
+		1, &barrierToRendering // Image barrier
+	);
+	draw_imgui(commandBuffer, m_swapchainFrames[imageIndex].imageView);
 
-    // Insert the pipeline barrier
-    commandBuffer.pipelineBarrier(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput, // After finishing color attachment output
-        vk::PipelineStageFlagBits::eBottomOfPipe, // Before presenting
-        vk::DependencyFlags(),
-        0, nullptr, // No memory barriers
-        0, nullptr, // No buffer barriers
-        1, &barrierToPresent // Image barrier
-    );
-    
+	vk::ImageMemoryBarrier barrierToPresent = {};
+	barrierToPresent.oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
+	barrierToPresent.newLayout = vk::ImageLayout::ePresentSrcKHR;
+	barrierToPresent.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+	barrierToPresent.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
+	barrierToPresent.image = m_swapchainFrames[imageIndex].image;
+	barrierToPresent.subresourceRange = barrierToRendering.subresourceRange;
+
+	// Insert the pipeline barrier
+	commandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eColorAttachmentOutput, // After finishing color attachment output
+		vk::PipelineStageFlagBits::eBottomOfPipe, // Before presenting
+		vk::DependencyFlags(),
+		0, nullptr, // No memory barriers
+		0, nullptr, // No buffer barriers
+		1, &barrierToPresent // Image barrier
+	);
 	//prepare_to_present_barrier(commandBuffer, m_swapchainFrames[imageIndex].image);
-    
 	try {
 		commandBuffer.end();
 	}
@@ -457,78 +459,80 @@ void Engine::render(Scene* scene) {
 
 		vkLogging::Logger::get_logger()->print("failed to record command buffer!");
 	}
-    
-    vk::PipelineStageFlags waitStages[] = {vk::PipelineStageFlagBits::eColorAttachmentOutput};
-    vk::SubmitInfo submitInfo = {};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &m_swapchainFrames[m_frameNumber].imageAvailable;
-    submitInfo.pWaitDstStageMask = waitStages;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-    vk::Semaphore signalSemaphores[] = {m_swapchainFrames[m_frameNumber].renderFinished};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+	vk::SubmitInfo submitInfo = {};
+	vk::Semaphore waitSemaphores[] = { m_swapchainFrames[m_frameNumber].imageAvailable };
+	vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
+	submitInfo.waitSemaphoreCount = 1;
+	submitInfo.pWaitSemaphores = waitSemaphores;
+	submitInfo.pWaitDstStageMask = waitStages;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+	vk::Semaphore signalSemaphores[] = { m_swapchainFrames[m_frameNumber].renderFinished };
+	submitInfo.signalSemaphoreCount = 1;
+	submitInfo.pSignalSemaphores = signalSemaphores;
+	try {
+		m_graphicsQueue.submit(submitInfo, m_swapchainFrames[m_frameNumber].inFlight);
+	}
+	catch (vk::SystemError err) {
+		vkLogging::Logger::get_logger()->print("failed to submit draw command buffer!");
+	}
 
-    try {
-        m_graphicsQueue.submit(1, &submitInfo, m_swapchainFrames[m_frameNumber].inFlight);
-    }
-    catch (vk::SystemError err) {
+	vk::PresentInfoKHR presentInfo = {};
+	presentInfo.waitSemaphoreCount = 1;
+	presentInfo.pWaitSemaphores = signalSemaphores;
+	vk::SwapchainKHR swapChains[] = { m_swapchain };
+	presentInfo.swapchainCount = 1;
+	presentInfo.pSwapchains = swapChains;
+	presentInfo.pImageIndices = &imageIndex;
+	vk::Result present;
+	try {
+		present = m_presentQueue.presentKHR(presentInfo);
+	}
+	catch (vk::OutOfDateKHRError error) {
+		present = vk::Result::eErrorOutOfDateKHR;
+	}
+	if (present == vk::Result::eErrorOutOfDateKHR || present == vk::Result::eSuboptimalKHR) {
+		std::cout << "Recreate" << std::endl;
+		recreate_swapchain(scene);
+		return;
+	}
+	m_frameNumber = (m_frameNumber + 1) % m_maxFramesInFlight;
 
-        vkLogging::Logger::get_logger()->print("failed to record command buffer!");
-    }
-    vk::PresentInfoKHR presentInfo = {};
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-    vk::SwapchainKHR swapChains[] = {m_swapchain};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-
-    try {
-        vk::Result present = m_presentQueue.presentKHR(&presentInfo);
-        if (present == vk::Result::eErrorOutOfDateKHR || present == vk::Result::eSuboptimalKHR) {
-            recreate_swapchain(scene);
-        }
-    } catch (vk::OutOfDateKHRError&) {
-        recreate_swapchain(scene);
-    }
-
-    m_frameNumber = (m_frameNumber + 1) % m_maxFramesInFlight;
 }
 
 void Engine::immediate_submit(std::function<void(vk::CommandBuffer cmd)>&& function)
 {
-    m_device.resetFences(1, &m_immFence);
-    m_immCommandBuffer.reset();
+	m_device.resetFences(1, &m_immFence);
+	m_immCommandBuffer.reset();
 
-    vk::CommandBuffer cmd = m_immCommandBuffer;
+	vk::CommandBuffer cmd = m_immCommandBuffer;
 
-    vk::CommandBufferBeginInfo cmdBeginInfo = {};
-    cmdBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
-    cmdBeginInfo.pNext = nullptr;
-    cmdBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-    
-    cmd.begin(cmdBeginInfo);
+	vk::CommandBufferBeginInfo cmdBeginInfo = {};
+	cmdBeginInfo.sType = vk::StructureType::eCommandBufferBeginInfo;
+	cmdBeginInfo.pNext = nullptr;
+	cmdBeginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
 
-    function(cmd);
-    
-    cmd.end();
+	cmd.begin(cmdBeginInfo);
 
-    vk::SubmitInfo cmdinfo = {};
-    cmdinfo.pNext = nullptr;
-    cmdinfo.waitSemaphoreCount = 0;
-    cmdinfo.pWaitSemaphores = nullptr;
-    cmdinfo.pWaitDstStageMask = nullptr;
-    cmdinfo.commandBufferCount = 1;
-    cmdinfo.pCommandBuffers = &cmd;
-    cmdinfo.signalSemaphoreCount = 0;
-    cmdinfo.pSignalSemaphores = nullptr;
+	function(cmd);
 
-    // submit command buffer to the queue and execute it.
-    //  _renderFence will now block until the graphic commands finish execution
-    m_graphicsQueue.submit(cmdinfo, m_immFence);
+	cmd.end();
 
-    m_device.waitForFences(1, &m_immFence, VK_TRUE, UINT64_MAX);
+	vk::SubmitInfo cmdinfo = {};
+	cmdinfo.pNext = nullptr;
+	cmdinfo.waitSemaphoreCount = 0;
+	cmdinfo.pWaitSemaphores = nullptr;
+	cmdinfo.pWaitDstStageMask = nullptr;
+	cmdinfo.commandBufferCount = 1;
+	cmdinfo.pCommandBuffers = &cmd;
+	cmdinfo.signalSemaphoreCount = 0;
+	cmdinfo.pSignalSemaphores = nullptr;
+
+	// submit command buffer to the queue and execute it.
+	//  _renderFence will now block until the graphic commands finish execution
+	m_graphicsQueue.submit(cmdinfo, m_immFence);
+
+	m_device.waitForFences(1, &m_immFence, VK_TRUE, UINT64_MAX);
 }
 
 /**
@@ -539,40 +543,40 @@ void Engine::cleanup_swapchain() {
 	for (vkUtil::SwapChainFrame& frame : m_swapchainFrames) {
 		frame.destroy();
 	}
-    m_device.destroySwapchainKHR(m_swapchain);
+	m_device.destroySwapchainKHR(m_swapchain);
 
-    m_device.destroyDescriptorPool(m_frameDescriptorPool[pipelineType::COMPUTE]);
+	m_device.destroyDescriptorPool(m_frameDescriptorPool[pipelineType::COMPUTE]);
 
 }
 
 Engine::~Engine() {
 
-    m_device.waitIdle();
+	m_device.waitIdle();
 
 	vkLogging::Logger::get_logger()->print("Goodbye see you!");
-    
+
     m_device.destroyDescriptorPool(m_imguiPool);
     ImGui_ImplVulkan_Shutdown();
 
-    m_device.destroyFence(m_mainFence);
+	m_device.destroyFence(m_mainFence);
     m_device.destroyFence(m_immFence);
-    
-    m_device.destroyCommandPool(m_commandPool);
+
+	m_device.destroyCommandPool(m_commandPool);
     m_device.destroyCommandPool(m_immCommandPool);
-    
+
 	for (pipelineType pipeline_type : m_pipelineTypes) {
-        m_device.destroyPipeline(m_pipeline[pipeline_type]);
-        m_device.destroyPipelineLayout(m_pipelineLayout[pipeline_type]);
+		m_device.destroyPipeline(m_pipeline[pipeline_type]);
+		m_device.destroyPipelineLayout(m_pipelineLayout[pipeline_type]);
 	}
 
 	cleanup_swapchain();
 	for (pipelineType pipeline_type : m_pipelineTypes) {
-        m_device.destroyDescriptorSetLayout(m_frameSetLayout[pipeline_type]);
+		m_device.destroyDescriptorSetLayout(m_frameSetLayout[pipeline_type]);
 	}
 
-    m_device.destroy();
+	m_device.destroy();
 
-    m_instance.destroySurfaceKHR(m_surface);
+	m_instance.destroySurfaceKHR(m_surface);
 	if (vkLogging::Logger::get_logger()->get_debug_mode()) {
 		// TODOinstance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dldi);
 	}
@@ -582,5 +586,5 @@ Engine::~Engine() {
 	* void Instance::destroy( Optional<const VULKAN_HPP_NAMESPACE::AllocationCallbacks> allocator = nullptr,
 											Dispatch const & d = ::vk::getDispatchLoaderStatic())
 	*/
-    m_instance.destroy();
+	m_instance.destroy();
 }

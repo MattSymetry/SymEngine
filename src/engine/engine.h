@@ -68,6 +68,7 @@ private:
     
     // imgui
     void init_imgui();
+	void recreate_imgui();
 
 	//device setup
 	void make_device(Scene* scene);
