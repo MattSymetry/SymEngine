@@ -21,7 +21,6 @@ Engine::Engine(int width, int height, SDL_Window* window, Scene* scene) {
 	m_window = window;
 
 	vkLogging::Logger::get_logger()->print("Making a graphics engine...");
-	//Set this to false to see framerate improvement
 	vkLogging::Logger::get_logger()->set_debug_mode(false);
 	make_instance();
 	make_device(scene);
@@ -45,7 +44,6 @@ void Engine::make_instance() {
 		vkLogging::Logger::get_logger()->print(
 			"Successfully abstracted SDL surface for Vulkan.");
 	}
-	//copy constructor converts to hpp convention
 	m_surface = c_style_surface;
 }
 
@@ -59,9 +57,6 @@ void Engine::make_device(Scene* scene) {
 	m_frameNumber = 0;
 }
 
-/**
-* Make a swapchain
-*/
 void Engine::make_swapchain(Scene* scene) {
 	vkInit::SwapChainBundle bundle = vkInit::create_swapchain(
 		m_device, m_physicalDevice, m_surface, m_width, m_height, scene
@@ -80,9 +75,6 @@ void Engine::make_swapchain(Scene* scene) {
 
 }
 
-/**
-* The swapchain must be recreated upon resize or minimization, among other cases
-*/
 void Engine::recreate_swapchain(Scene* scene) {
     std::cout << "Recreating swapchain" << std::endl;
 	m_width = 0;
@@ -412,10 +404,10 @@ void Engine::render(Scene* scene) {
 	prepare_to_trace_barrier(commandBuffer, m_swapchainFrames[imageIndex].image);
 	dispatch_compute(commandBuffer, imageIndex);
 	vk::ImageMemoryBarrier barrierToRendering = {};
-	barrierToRendering.oldLayout = vk::ImageLayout::eGeneral; // Assuming this was the layout after compute
+	barrierToRendering.oldLayout = vk::ImageLayout::eGeneral;
 	barrierToRendering.newLayout = vk::ImageLayout::eColorAttachmentOptimal;
-	barrierToRendering.srcAccessMask = vk::AccessFlagBits::eShaderWrite; // After compute shader writes
-	barrierToRendering.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite; // Before color attachment writes
+	barrierToRendering.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+	barrierToRendering.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 	barrierToRendering.image = m_swapchainFrames[imageIndex].image;
 	barrierToRendering.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 	barrierToRendering.subresourceRange.baseMipLevel = 0;
@@ -423,14 +415,13 @@ void Engine::render(Scene* scene) {
 	barrierToRendering.subresourceRange.baseArrayLayer = 0;
 	barrierToRendering.subresourceRange.layerCount = 1;
 
-	// Insert the pipeline barrier
 	commandBuffer.pipelineBarrier(
-		vk::PipelineStageFlagBits::eComputeShader, // Wait for compute shader
-		vk::PipelineStageFlagBits::eColorAttachmentOutput, // Before starting color attachment output
+		vk::PipelineStageFlagBits::eComputeShader,
+		vk::PipelineStageFlagBits::eColorAttachmentOutput,
 		vk::DependencyFlags(),
-		0, nullptr, // No memory barriers
-		0, nullptr, // No buffer barriers
-		1, &barrierToRendering // Image barrier
+		0, nullptr,
+		0, nullptr,
+		1, &barrierToRendering
 	);
 	draw_imgui(commandBuffer, m_swapchainFrames[imageIndex].imageView);
 
@@ -442,16 +433,15 @@ void Engine::render(Scene* scene) {
 	barrierToPresent.image = m_swapchainFrames[imageIndex].image;
 	barrierToPresent.subresourceRange = barrierToRendering.subresourceRange;
 
-	// Insert the pipeline barrier
 	commandBuffer.pipelineBarrier(
-		vk::PipelineStageFlagBits::eColorAttachmentOutput, // After finishing color attachment output
-		vk::PipelineStageFlagBits::eBottomOfPipe, // Before presenting
+		vk::PipelineStageFlagBits::eColorAttachmentOutput,
+		vk::PipelineStageFlagBits::eBottomOfPipe,
 		vk::DependencyFlags(),
-		0, nullptr, // No memory barriers
-		0, nullptr, // No buffer barriers
-		1, &barrierToPresent // Image barrier
+		0, nullptr,
+		0, nullptr,
+		1, &barrierToPresent
 	);
-	//prepare_to_present_barrier(commandBuffer, m_swapchainFrames[imageIndex].image);
+
 	try {
 		commandBuffer.end();
 	}
@@ -528,16 +518,11 @@ void Engine::immediate_submit(std::function<void(vk::CommandBuffer cmd)>&& funct
 	cmdinfo.signalSemaphoreCount = 0;
 	cmdinfo.pSignalSemaphores = nullptr;
 
-	// submit command buffer to the queue and execute it.
-	//  _renderFence will now block until the graphic commands finish execution
 	m_graphicsQueue.submit(cmdinfo, m_immFence);
 
 	m_device.waitForFences(1, &m_immFence, VK_TRUE, UINT64_MAX);
 }
 
-/**
-* Free the memory associated with the swapchain objects
-*/
 void Engine::cleanup_swapchain() {
 
 	for (vkUtil::SwapChainFrame& frame : m_swapchainFrames) {
@@ -580,11 +565,5 @@ Engine::~Engine() {
 	if (vkLogging::Logger::get_logger()->get_debug_mode()) {
 		// TODOinstance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dldi);
 	}
-	/*
-	* from vulkan_funcs.hpp:
-	*
-	* void Instance::destroy( Optional<const VULKAN_HPP_NAMESPACE::AllocationCallbacks> allocator = nullptr,
-											Dispatch const & d = ::vk::getDispatchLoaderStatic())
-	*/
 	m_instance.destroy();
 }

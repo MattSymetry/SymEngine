@@ -19,7 +19,7 @@ private:
     int _frameCap = 120;
     int _deltaTime;
     
-    int _width, _height;
+    int _width, _height, _tmpMousePosX, _tmpMousePosY;
     
     void setupSDLWindow(int width, int height);
     void setupTimer();

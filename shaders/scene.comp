@@ -1,13 +1,12 @@
 vec2 map( in vec3 pos )
 {
     vec2 res = vec2( pos.y, 0.0 );
-    //res = opU( res, vec2( sdSphere(pos-vec3(0.0+sin(time),0.25, 0.0), 0.25 ), 4), false );
     vec2 balls = vec2( pos.y, 0.0 );
     for (int i = 0; i < SceneData.sphereCount; i++) {
         Transform transform = objectData.objects[i].transform;
         vec3 spherePos = transform.position.xyz;
         float sphereRadius = transform.scale.x;
-        balls = opU( balls, vec2( sdSphere(pos-spherePos, sphereRadius), 2), false );
+        balls = opU( balls, vec2( sdSphere(pos-spherePos, sphereRadius), i+1), false );
     }
     res = opU( res, balls, false );
     return res;

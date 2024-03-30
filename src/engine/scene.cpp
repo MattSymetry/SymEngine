@@ -1,13 +1,14 @@
 #include "scene.h"
+#include <algorithm>
 
 Scene::Scene()
 {
-    m_camera = Camera(glm::vec3(0.0f, 453.0f, 0.0f), glm::vec3(0.0,0.0,0.0), glm::vec3(0.0f, 0.0f, 0.0f), 2.5f);
+    m_camera = Camera(glm::vec3(0.0f, 2.0f, -2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 2.5f);
     description = {};
     description.camera_position = m_camera.getPosition();
-    description.camera_forward = m_camera.getForward();
-    description.camera_up = m_camera.getUp();
-    description.camera_right = m_camera.getRight();
+    description.camera_target = m_camera.getTarget();
+    description.camera_roll = m_camera.getRoll();
+    description.camera_fov = m_camera.getFov();
     description.sphereCount = 20;
     description.boxCount = 0;
     description.coneCount = 0;
@@ -29,7 +30,7 @@ void Scene::SetupObjects() {
     int objCount = description.sphereCount;
     for (int i = 0; i < objCount; i++) {
         auto mygameObject = std::make_unique<GameObject>();
-        Transform* transformComponent = new Transform(glm::vec3((i%20)*0.1f -1.0f, 0.25f, ((int)i/20)*0.1f), glm::vec3(0.0f), glm::vec3(0.05f));
+        Transform* transformComponent = new Transform(glm::vec3((i% objCount)*0.1f -1.0f, 0.051f, ((int)i/ objCount)*0.1f), glm::vec3(0.0f), glm::vec3(0.05f));
         mygameObject->addComponent(transformComponent);
         
         Sphere sphereShape;
@@ -59,43 +60,24 @@ void Scene::KeyPressed(SDL_Keycode key) {
 }
 
 void Scene::KeyboardInput(Uint8* state) {
-    float cameraSpeed = 0.5f * m_deltaTime / 1000;
-    if (state[SDL_SCANCODE_W]) {
-        m_camera.MoveForward(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_S]) {
-        m_camera.MoveBackward(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_A]) {
-        m_camera.MoveLeft(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_D]) {
-        m_camera.MoveRight(cameraSpeed);
-    }
-    if (state[SDL_SCANCODE_SPACE]) {
-        m_camera.MoveUp(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_LSHIFT]) {
-        m_camera.MoveDown(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_LEFT]) {
-        m_camera.RotateLeft(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_RIGHT]) {
-        m_camera.RotateRight(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_UP]) {
-        m_camera.RotateUp(cameraSpeed);
-	}
-    if (state[SDL_SCANCODE_DOWN]) {
-        m_camera.RotateDown(cameraSpeed);
-    }
+
+}
+
+void Scene::MouseInput(int x, int y) {
+    m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
+    description.camera_position = m_camera.getPosition();
+}
+
+void Scene::MouseScroll(int y) {
+    glm::vec3 dir = glm::normalize(m_camera.getTarget() - m_camera.getPosition());
+	m_camera.Move(dir * float(y) * m_camera.getScrollSpeed(), m_deltaTime / 1000.0);
+	description.camera_position = m_camera.getPosition();
 }
 
 void Scene::Update(int deltaTime) {
-    m_deltaTime = deltaTime;
+    m_deltaTime = std::clamp(deltaTime, 0, 1000);
     frameCount ++;
-    //std::cout << "forward: " << frameCount << std::endl;
+    
 
     //description.camera_position = _camera.getPosition();
     //std::count << description.camera_position.x << " " << description.camera_position.y << " " << description.camera_position.z << std::endl;

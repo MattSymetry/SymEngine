@@ -5,10 +5,10 @@
 #include "vulkan/vkUtil/buffer.h"
 
 struct SceneDescription {
-    alignas(16) glm::vec3 camera_right;
-    alignas(16) glm::vec3 camera_forward;
-    alignas(16) glm::vec3 camera_up;
     alignas(16) glm::vec3 camera_position;
+    alignas(16) glm::vec3 camera_target;
+    alignas(4) float camera_roll;
+    alignas(4) float camera_fov;
     alignas(4) int sphereCount;
     alignas(4) int boxCount;
     alignas(4) int coneCount;
@@ -30,6 +30,8 @@ public:
     void Update(int deltaTime);
     void KeyPressed(SDL_Keycode key);
     void KeyboardInput(Uint8* state);
+    void MouseInput(int x, int y);
+    void MouseScroll(int y);
     
 private:
     Camera m_camera;

@@ -16,6 +16,9 @@ Window::Window(int width, int height, bool debug)
     _scene = new Scene();
     
     _engine = new Engine(width, height, _window, _scene);
+
+    _tmpMousePosX = _width / 2;
+    _tmpMousePosY = _height / 2;
     
     _frameDelay = 1000.0f / _frameCap;
 }
@@ -71,12 +74,43 @@ void Window::run() {
                     io.DisplaySize = ImVec2(static_cast<float>(_width), static_cast<float>(_height));
                 }
             }
+            else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                if (e.button.button == SDL_BUTTON_RIGHT) {
+                    SDL_SetRelativeMouseMode(SDL_TRUE);
+                    SDL_GetMouseState(&_tmpMousePosX, &_tmpMousePosY);
+                    SDL_GetRelativeMouseState(nullptr, nullptr);
+                }
+            }
+            else if (e.type == SDL_MOUSEBUTTONUP) {
+                if (e.button.button == SDL_BUTTON_RIGHT) {
+					SDL_SetRelativeMouseMode(SDL_FALSE);
+                    SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
+				}
+			}
+            else if (e.type == SDL_MOUSEWHEEL) {
+				_scene->MouseScroll(e.wheel.y);
+			}
 
             SDL_PumpEvents();
             const Uint8* state = SDL_GetKeyboardState(NULL);
             _scene->KeyboardInput((Uint8*)state);
 
            ImGui_ImplSDL2_ProcessEvent(&e);
+       }
+
+       if (SDL_GetRelativeMouseMode()) {
+           int mouseX, mouseY;
+           Uint32 mouseButtons = SDL_GetMouseState(&mouseX, &mouseY);
+           bool isRightButtonDown = mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT);
+           if (!isRightButtonDown) {
+               SDL_SetRelativeMouseMode(SDL_FALSE);
+               SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
+           }
+           else {
+               int deltaX, deltaY;
+               SDL_GetRelativeMouseState(&deltaX, &deltaY);
+               _scene->MouseInput(deltaX, deltaY);
+           }
        }
 
         ImGui_ImplVulkan_NewFrame();

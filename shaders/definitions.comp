@@ -27,10 +27,10 @@ struct Camera {
 };
 
 layout(set = 0, binding = 1) uniform UBO {
-    vec3 camera_forward;
-    vec3 camera_right;
-    vec3 camera_up;
     vec3 camera_position;
+    vec3 camera_target;
+    float camera_roll;
+    float camera_fov;
     int sphereCount;
     int boxCount;
     int coneCount;
