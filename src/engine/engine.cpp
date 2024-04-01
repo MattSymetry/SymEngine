@@ -8,6 +8,7 @@
 #include "vulkan/vkInit/commands.h"
 #include "vulkan/vkInit/sync.h"
 #include "vulkan/vkInit/descriptors.h"
+#define IMGUI_ENABLE_DOCKING
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
@@ -207,8 +208,16 @@ void Engine::init_imgui()
     m_imguiPool = m_device.createDescriptorPool(pool_info);
 
     ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     ImGui_ImplSDL2_InitForVulkan(m_window);
+	VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo = {};
+	VkFormat form = VkFormat::VK_FORMAT_B8G8R8A8_UNORM;
+	pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+	pipelineRenderingCreateInfo.colorAttachmentCount = 1;
+	pipelineRenderingCreateInfo.pColorAttachmentFormats = &form;
+
 
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = m_instance;
@@ -219,15 +228,16 @@ void Engine::init_imgui()
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
     init_info.UseDynamicRendering = true;
-    init_info.ColorAttachmentFormat = VkFormat::VK_FORMAT_B8G8R8A8_UNORM;
+	init_info.PipelineRenderingCreateInfo = pipelineRenderingCreateInfo;
+    //init_info.ColorAttachmentFormat = VkFormat::VK_FORMAT_B8G8R8A8_UNORM;
 
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-    ImGui_ImplVulkan_Init(&init_info, VK_NULL_HANDLE);
+    ImGui_ImplVulkan_Init(&init_info);
 
-    immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(cmd); });
+    immediate_submit([&](VkCommandBuffer cmd) { ImGui_ImplVulkan_CreateFontsTexture(); });
 
-    ImGui_ImplVulkan_DestroyFontUploadObjects();
+    //ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 vk::RenderingAttachmentInfoKHR Engine::attachment_info(

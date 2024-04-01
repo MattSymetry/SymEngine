@@ -1,4 +1,5 @@
 #include "window.h"
+#include "editor.h"
 #include <thread>
 #include <functional>
 #include "imgui.h"
@@ -45,6 +46,7 @@ void Window::setupSDLWindow(int width, int height)
 void Window::run() {
     bool bQuit = false;
     render = true;
+    int customWindowWidth = 300;
     //std::thread renderThread(std::bind(&Window::renderLoop, this));
 
     
@@ -114,17 +116,12 @@ void Window::run() {
        }
 
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL2_NewFrame(_window);
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        ImGui::Begin("Test Window"); // Begin a new window with the title "Test Window"
 
-        if (ImGui::Button("Random Test Button")) {
-            // This code executes when the button is pressed
-            // You can put any logic here, like printing a message, triggering a function, etc.
-            std::cout << "Button Pressed!" << std::endl;
-        }
+        Docker();
+        SettingsPanel();
 
-        ImGui::End(); // End the window
         ImGui::Render();
         
         _engine->render(_scene);
