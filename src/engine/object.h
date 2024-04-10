@@ -7,13 +7,24 @@
 
 struct ObjectData {
     TransformStruct transform;
-    glm::vec4 pos;
-    //ShapeData shape;
+    ShapeDataStruct shape; 
     //ColorData color;
 };
 
 class GameObject {
-    std::unordered_map<std::type_index, Component*> components;
+private:
+    ObjectData m_data;
+    std::unordered_map<std::type_index, Component*> m_components;
+    void updateData() {
+		Transform* transform = getComponent<Transform>();
+		if (transform) {
+			m_data.transform = transform->getStruct();
+		}
+		Shape* shape = getComponent<Shape>();
+		if (shape) {
+			m_data.shape = shape->getStruct();
+		}
+	}
 
 public:
     
@@ -24,17 +35,17 @@ public:
     
     template<typename T>
     void addComponent(T* component) {
-        components[typeid(T)] = component;
+        m_components[typeid(T)] = component;
     }
 
     template<typename T>
     T* getComponent() {
-        auto it = components.find(typeid(T));
-        return it != components.end() ? static_cast<T*>(it->second) : nullptr;
+        auto it = m_components.find(typeid(T));
+        return it != m_components.end() ? static_cast<T*>(it->second) : nullptr;
     }
 
     ~GameObject() {
-        for (auto& pair : components) {
+        for (auto& pair : m_components) {
             delete pair.second;
         }
     }

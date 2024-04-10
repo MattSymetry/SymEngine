@@ -10,6 +10,18 @@ file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 source_group("Shader" FILES ${GLSL_SOURCE_FILES})
 add_executable(SymEngine ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES})
 
+set(ASSETS_DIR "${PROJECT_SOURCE_DIR}/../../assets")
+
+foreach(ASSET_FILE ${ASSET_FILES})
+    file(RELATIVE_PATH ASSET_REL_PATH ${ASSETS_DIR} ${ASSET_FILE})
+    set(OUTPUT_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/${ASSET_REL_PATH}")
+
+    add_custom_command(TARGET SymEngine POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
+        COMMAND ${CMAKE_COMMAND} -E copy ${ASSET_FILE} ${OUTPUT_PATH}
+        COMMENT "Copying ${ASSET_FILE} | ${ASSETS_DIR}  to ${OUTPUT_PATH}")
+endforeach()
+
 foreach(GLSL_FILE ${GLSL_FILES})
     get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
     set(OUTPUT_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${FILE_NAME}")

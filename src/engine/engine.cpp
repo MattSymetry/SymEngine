@@ -210,6 +210,11 @@ void Engine::init_imgui()
     ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.IniFilename = NULL;
+	std::string executableDir = vkUtil::getExecutableDirectory();
+	executableDir += "/assets/fonts/RobotoMono-Regular.ttf";
+	ImFont* myFont = io.Fonts->AddFontFromFileTTF(executableDir.data(), 16.0f);
+	io.Fonts->Build();
 
     ImGui_ImplSDL2_InitForVulkan(m_window);
 	VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo = {};
@@ -336,13 +341,13 @@ void Engine::prepare_to_trace_barrier(vk::CommandBuffer commandBuffer, vk::Image
 	commandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 }
 
-void Engine::dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex) {
+void Engine::dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex, glm::vec4 viewport) {
 
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[pipelineType::COMPUTE]);
 
 	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipelineLayout[pipelineType::COMPUTE], 0, m_swapchainFrames[imageIndex].descriptorSet[pipelineType::COMPUTE], nullptr);
 
-	commandBuffer.dispatch(static_cast<uint32_t>(m_swapchainExtent.width / 8), static_cast<uint32_t>(m_swapchainExtent.height / 8), 1);
+	commandBuffer.dispatch(static_cast<uint32_t>((viewport.z + 7) / 8), static_cast<uint32_t>((viewport.w + 7) / 8), 1);
 
 }
 
@@ -412,7 +417,7 @@ void Engine::render(Scene* scene) {
 		vkLogging::Logger::get_logger()->print("Failed to begin recording command buffer!");
 	}
 	prepare_to_trace_barrier(commandBuffer, m_swapchainFrames[imageIndex].image);
-	dispatch_compute(commandBuffer, imageIndex);
+	dispatch_compute(commandBuffer, imageIndex, scene->m_viewport);
 	vk::ImageMemoryBarrier barrierToRendering = {};
 	barrierToRendering.oldLayout = vk::ImageLayout::eGeneral;
 	barrierToRendering.newLayout = vk::ImageLayout::eColorAttachmentOptimal;

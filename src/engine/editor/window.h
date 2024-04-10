@@ -2,11 +2,13 @@
 #include "../common/config.h"
 #include "../engine/engine.h"
 #include "../engine/scene.h"
+#include "editor.h"
 
 class Window {
 private:
     Engine* _engine;
     struct SDL_Window* _window{ nullptr };
+    Editor* _editor;
     SDL_Event e;
     Scene* _scene;
     char _windowTitle[100];
@@ -18,6 +20,7 @@ private:
     float _frameDelay;
     int _frameCap = 120;
     int _deltaTime;
+    float _framerate;
     
     int _width, _height, _tmpMousePosX, _tmpMousePosY;
     

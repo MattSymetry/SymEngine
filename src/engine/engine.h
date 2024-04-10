@@ -19,7 +19,6 @@ public:
 
 private:
 
-	//glfw-related variables
 	int m_width;
 	int m_height;
 	SDL_Window* m_window;
@@ -89,7 +88,7 @@ private:
 	void prepare_frame(uint32_t imageIndex, Scene* scene);
 	void prepare_scene(vk::CommandBuffer commandBuffer);
 	void prepare_to_trace_barrier(vk::CommandBuffer commandBuffer, vk::Image image);
-	void dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex);
+	void dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex, glm::vec4 viewport);
 	void prepare_to_present_barrier(vk::CommandBuffer commandBuffer, vk::Image image);
     
     vk::RenderingAttachmentInfoKHR attachment_info(

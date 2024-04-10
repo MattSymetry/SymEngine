@@ -131,7 +131,7 @@ glslang_resource_t vkUtil::get_default_resource() {
     return r;
 }
 
-std::string getExecutablePath() {
+std::string vkUtil::getExecutablePath() {
 #if defined(__APPLE__)
     char path[PATH_MAX];
     uint32_t size = sizeof(path);
@@ -151,7 +151,7 @@ std::string getExecutablePath() {
     return std::string(path);
 }
 
-std::string getExecutableDirectory() {
+std::string vkUtil::getExecutableDirectory() {
     std::string executablePath = getExecutablePath();
     if (executablePath.empty()) {
         return "";

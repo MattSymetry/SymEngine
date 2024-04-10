@@ -37,9 +37,15 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/shaders/*.comp")
 source_group(TREE "${PROJECT_SOURCE_DIR}/shaders" FILES ${GLSL_SOURCE_FILES})
 add_custom_target(Shaders SOURCES ${GLSL_SOURCE_FILES})
 
+file(GLOB_RECURSE ASSETS_SOURCE_FILES "${PROJECT_SOURCE_DIR}/assets/*")
+
 foreach(GLSL ${GLSL_SOURCE_FILES})
   list(APPEND GLSL_FILES ${GLSL})
 endforeach(GLSL)
 
+foreach(ASSET ${ASSETS_SOURCE_FILES})
+  list(APPEND ASSET_FILES ${ASSET})
+endforeach(ASSET)
 
 set(GLSL_FILES ${GLSL_FILES} CACHE INTERNAL "List of SPIR-V binary files")
+set(ASSET_FILES ${ASSET_FILES} CACHE INTERNAL "List of assets")

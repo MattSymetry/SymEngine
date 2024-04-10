@@ -10,9 +10,13 @@ struct Transform {
     vec4 scale;
 };
 
+struct ShapeData {
+    mat4 params;
+};
+
 struct Object {
     Transform transform;
-    vec4 posi;
+    ShapeData shape;
 };
 
 layout(std140, binding = 3) readonly buffer ObjectBuffer { // object data
@@ -29,6 +33,7 @@ struct Camera {
 layout(set = 0, binding = 1) uniform UBO {
     vec3 camera_position;
     vec3 camera_target;
+    vec4 viewport;
     float camera_roll;
     float camera_fov;
     int sphereCount;
@@ -41,4 +46,4 @@ float dot2( in vec3 v ) { return dot(v,v); }
 float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
 ivec2 screen_size = imageSize(colorBuffer);
 ivec2 gi = ivec2(gl_GlobalInvocationID.xy);
-ivec2 screen_pos = ivec2(gi.x, gi.y);
+ivec2 screen_pos = ivec2(gi.x + SceneData.viewport.x, gi.y + SceneData.viewport.y);

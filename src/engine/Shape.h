@@ -1,5 +1,9 @@
 #pragma once
 
+struct ShapeDataStruct {
+    glm::mat4 parameters;
+};
+
 struct Sphere {
     float radius;
 };
@@ -19,6 +23,7 @@ struct Cone {
 class Shape : public Component {
 public:
     enum class Type { Sphere, Box, Cone } type;
+    ShapeDataStruct m_shapeData;
 
     union ShapeUnion {
         Sphere sphere;
@@ -74,6 +79,10 @@ public:
         }
         return *this;
     }
+
+    const ShapeDataStruct getStruct() const {
+		return m_shapeData;
+	}
 
     ~Shape() {
         switch (type) {

@@ -1,17 +1,21 @@
 #include "scene.h"
 #include <algorithm>
 
-Scene::Scene()
+Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
 {
+    m_sceneGraphNodes.push_back(&m_sceneGraph);
     m_camera = Camera(glm::vec3(0.0f, 2.0f, -2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 2.5f);
     description = {};
     description.camera_position = m_camera.getPosition();
     description.camera_target = m_camera.getTarget();
+    description.viewport = viewport;
     description.camera_roll = m_camera.getRoll();
     description.camera_fov = m_camera.getFov();
     description.sphereCount = 20;
     description.boxCount = 0;
     description.coneCount = 0;
+
+    m_viewport = viewport;
     
     AddBuffer(sizeof(description), vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &description);
     AddBuffer(4, vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &frameCount);
@@ -30,9 +34,8 @@ void Scene::SetupObjects() {
     int objCount = description.sphereCount;
     for (int i = 0; i < objCount; i++) {
         auto mygameObject = std::make_unique<GameObject>();
-        Transform* transformComponent = new Transform(glm::vec3((i% objCount)*0.1f -1.0f, 0.051f, ((int)i/ objCount)*0.1f), glm::vec3(0.0f), glm::vec3(0.05f));
-        mygameObject->addComponent(transformComponent);
-        
+        mygameObject->getComponent<Transform>()->setPosition(glm::vec3((i% objCount)*0.1f -1.0f, 0.051f, ((int)i/ objCount)*0.1f));
+        mygameObject->getComponent<Transform>()->setScale(glm::vec3(0.05f));
         Sphere sphereShape;
         sphereShape.radius = 5.0f;
         mygameObject->addComponent(new Shape(sphereShape));
@@ -45,9 +48,8 @@ void Scene::SetupObjects() {
     for (const auto& gameObjectPtr : gameObjects) {
         if (gameObjectPtr) {
             ObjectData data;
-            // Note: We now use gameObjectPtr->get() to get the raw pointer from the unique_ptr
             data.transform = gameObjectPtr->getComponent<Transform>()->getStruct();
-            data.pos = glm::vec4(gameObjectPtr->getComponent<Transform>()->getPosition(),0.0f);
+            std::cout << data.transform.position.x << " " << data.transform.position.y << " " << data.transform.position.z << std::endl;
             objectData.push_back(data);
             i++;
         }
@@ -99,4 +101,57 @@ void Scene::UpdateObjectData() {
         }
     }
 
+}
+
+void Scene::UpdateViewport(glm::vec4 viewport) {
+	m_viewport = viewport;
+	description.viewport = viewport;
+}
+
+void Scene::AddEmpty(SceneGraphNode* parent) {
+    SceneGraphNode* node = AddSceneGraphNode();
+    if (parent) {
+		node->setParent(parent);
+	}
+}
+
+void Scene::AddSphere(glm::vec3 position, float radius, glm::vec3 color) {
+	auto mygameObject = std::make_unique<GameObject>();
+	mygameObject->getComponent<Transform>()->setPosition(position);
+	Sphere sphereShape;
+	sphereShape.radius = radius;
+	mygameObject->addComponent(new Shape(sphereShape));
+	
+    SceneGraphNode* node = AddSceneGraphNode();
+    node->addObject(std::move(mygameObject));
+}
+
+SceneGraphNode* Scene::AddSceneGraphNode() {
+    m_sceneSize++;
+    SceneGraphNode* node = new SceneGraphNode(m_sceneSize, false, &m_sceneGraph, "Object " + std::to_string(m_sceneSize));
+    m_sceneGraphNodes.push_back(node);
+    return node;
+}
+
+SceneGraphNode* Scene::GetSceneGraphNode(int id) {
+    if (m_sceneGraphNodes[id] != nullptr) {
+		return m_sceneGraphNodes[id];
+	}
+	return nullptr;
+}
+
+SceneGraphNode* Scene::GetSelectedNode() {
+	return GetSceneGraphNode(m_selectedObjectId);
+}
+
+void Scene::RemoveSceneGraphNode(SceneGraphNode* node) {
+    if (node) {
+        if (!node->isLeaf()) {
+            for (auto& child : node->getChildren()) {
+				RemoveSceneGraphNode(child);
+			}
+		}
+        m_sceneGraphNodes[node->getId()] = nullptr;
+        delete node;
+	}
 }

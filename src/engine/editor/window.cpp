@@ -1,5 +1,4 @@
 #include "window.h"
-#include "editor.h"
 #include <thread>
 #include <functional>
 #include "imgui.h"
@@ -14,9 +13,11 @@ Window::Window(int width, int height, bool debug)
     setupSDLWindow(width, height);
     setupTimer();
     
-    _scene = new Scene();
+    _scene = new Scene(glm::vec4(0.0f, 0.0f, width, height));
     
     _engine = new Engine(width, height, _window, _scene);
+
+    _editor = new Editor();
 
     _tmpMousePosX = _width / 2;
     _tmpMousePosY = _height / 2;
@@ -47,6 +48,7 @@ void Window::run() {
     bool bQuit = false;
     render = true;
     int customWindowWidth = 300;
+    _editor->setTheme();
     //std::thread renderThread(std::bind(&Window::renderLoop, this));
 
     
@@ -118,9 +120,16 @@ void Window::run() {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+        snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", ImGui::GetIO().Framerate);
 
-        Docker();
-        SettingsPanel();
+        _editor->Docker();
+        _editor->SettingsPanel(_scene);
+        _editor->MenuBar();
+        glm::vec4 viewp = _editor->GetViewport();
+        if (_scene->m_viewport != viewp) 
+        {
+			_scene->UpdateViewport(viewp);
+		}
 
         ImGui::Render();
         
@@ -154,9 +163,9 @@ void Window::calcFramerate()
     _deltaTime = _currentFrameTime - _lastFrameTime;
 
     if (_deltaTime >= 1) {
-        float framerate = 1.0f / (_deltaTime / 1000.0f);
+        _framerate = 1.0f / (_deltaTime / 1000.0f);
         if (_currentFrameTime - _lastFPSupdate > 500 ) {
-            snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", framerate);
+            //snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", _framerate);
             SDL_SetWindowTitle(_window, _windowTitle);
             _lastFPSupdate = _currentFrameTime;
         }
