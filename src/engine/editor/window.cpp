@@ -55,6 +55,28 @@ void Window::run() {
     while (!bQuit)
     {
         // Events
+       glm::vec4 viewp = _editor->GetViewport();
+       glm::vec4 viewportBounds = glm::vec4(viewp.x, viewp.x + viewp.z, 0.0f, viewp.w);
+       int mouseX, mouseY;
+       Uint32 mouseButtons = SDL_GetMouseState(&mouseX, &mouseY);
+       bool mouseInViewport = (mouseX > viewportBounds.x && mouseX < viewportBounds.y && mouseY > viewportBounds.z && mouseY < viewportBounds.w);
+       if (SDL_GetRelativeMouseMode()) {
+           if (mouseInViewport) {
+               bool isRightButtonDown = mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT);
+               // Get 
+               if (!isRightButtonDown) {
+                   SDL_SetRelativeMouseMode(SDL_FALSE);
+                   SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
+               }
+               else {
+                   int deltaX, deltaY;
+                   SDL_GetRelativeMouseState(&deltaX, &deltaY);
+                   _scene->MouseInput(deltaX, deltaY);
+               }
+           }
+
+       }
+
        if (SDL_PollEvent(&e)) {
             
             if (e.type == SDL_QUIT)
@@ -79,19 +101,19 @@ void Window::run() {
                 }
             }
             else if (e.type == SDL_MOUSEBUTTONDOWN) {
-                if (e.button.button == SDL_BUTTON_RIGHT) {
+                if (mouseInViewport && e.button.button == SDL_BUTTON_RIGHT) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
                     SDL_GetMouseState(&_tmpMousePosX, &_tmpMousePosY);
                     SDL_GetRelativeMouseState(nullptr, nullptr);
                 }
             }
-            else if (e.type == SDL_MOUSEBUTTONUP) {
+            else if (mouseInViewport && e.type == SDL_MOUSEBUTTONUP) {
                 if (e.button.button == SDL_BUTTON_RIGHT) {
 					SDL_SetRelativeMouseMode(SDL_FALSE);
                     SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
 				}
 			}
-            else if (e.type == SDL_MOUSEWHEEL) {
+            else if (mouseInViewport &&  e.type == SDL_MOUSEWHEEL) {
 				_scene->MouseScroll(e.wheel.y);
 			}
 
@@ -102,30 +124,15 @@ void Window::run() {
            ImGui_ImplSDL2_ProcessEvent(&e);
        }
 
-       if (SDL_GetRelativeMouseMode()) {
-           int mouseX, mouseY;
-           Uint32 mouseButtons = SDL_GetMouseState(&mouseX, &mouseY);
-           bool isRightButtonDown = mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT);
-           if (!isRightButtonDown) {
-               SDL_SetRelativeMouseMode(SDL_FALSE);
-               SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
-           }
-           else {
-               int deltaX, deltaY;
-               SDL_GetRelativeMouseState(&deltaX, &deltaY);
-               _scene->MouseInput(deltaX, deltaY);
-           }
-       }
-
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", ImGui::GetIO().Framerate);
 
         _editor->Docker();
+        _editor->Gizmo(_scene);
         _editor->SettingsPanel(_scene);
         _editor->MenuBar();
-        glm::vec4 viewp = _editor->GetViewport();
         if (_scene->m_viewport != viewp) 
         {
 			_scene->UpdateViewport(viewp);

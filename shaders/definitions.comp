@@ -1,27 +1,19 @@
-#version 450
+#version 460
 layout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout (binding = 0, rgba8) uniform image2D colorBuffer; // frame image
 layout(set = 0, binding = 2) uniform timeUniform {int myInt;} unscaledTime; // time
 float time = float(unscaledTime.myInt) / 40.0;
 
-struct Transform {
-    vec4 position;
-    vec4 rotation;
-    vec4 scale;
+struct NodeData {
+    ivec4 data0;//id, parent, first, count
+    ivec4 data1;// operator, group, padding[2]
+    mat4 transform;
+    mat4 obejctData;
 };
 
-struct ShapeData {
-    mat4 params;
-};
-
-struct Object {
-    Transform transform;
-    ShapeData shape;
-};
-
-layout(std140, binding = 3) readonly buffer ObjectBuffer { // object data
-    Object objects[];
-} objectData;
+layout(std140, binding = 3) buffer ObjectBuffer {
+    NodeData nodes[];
+} SceneNodes;
 
 struct Camera {
     vec3 position;
@@ -36,9 +28,7 @@ layout(set = 0, binding = 1) uniform UBO {
     vec4 viewport;
     float camera_roll;
     float camera_fov;
-    int sphereCount;
-    int boxCount;
-    int coneCount;
+    int sceneSize;
 } SceneData;
 
 float dot2( in vec2 v ) { return dot(v,v); }

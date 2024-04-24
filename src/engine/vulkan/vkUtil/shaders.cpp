@@ -212,7 +212,7 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
     input.forward_compatible = false;
     input.messages = GLSLANG_MSG_DEFAULT_BIT;
     input.resource = &defaultResources;
-    
+     
     glslang_shader_t* shader = glslang_shader_create(&input);
 
     if (!glslang_shader_preprocess(shader, &input))
@@ -259,7 +259,7 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
     glslang_shader_delete(shader);
     glslang::FinalizeProcess();
     return resultingSpirv;
-}
+} 
 
 std::vector<char> vkUtil::prepareShader() {
     std::vector<char> shader = readFile("/shaders/definitions.comp");
@@ -288,6 +288,7 @@ vk::ShaderModule vkUtil::createModule(std::string filename, vk::Device device) {
     sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
     
     std::string str(sourceCode.begin(), sourceCode.end());
+    //std::cout << "Shader source: " << str << std::endl; 
     auto sourceCodeUnit = compileShaderSourceToSpirv(str, filename, GLSLANG_STAGE_COMPUTE);
     moduleInfo.codeSize = sourceCodeUnit.size() * sizeof(decltype(sourceCodeUnit)::value_type);
     moduleInfo.pCode = reinterpret_cast<const uint32_t*>(sourceCodeUnit.data());

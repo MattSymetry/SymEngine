@@ -1,19 +1,23 @@
-float sdSphere( vec3 p, float r )
+float sdSphere( vec3 position, float radius )
 {
-    float timeScaled = time / 3.0;
-    
-    //r += 0.02*sin((p.x)*30.0);
-    //r += 0.02*sin((p.x+timeScaled)*30.0);
-    //r += 0.02*sin((p.x+timeScaled)*30.0)*1.0*sin((p.y+timeScaled)*30.0)*1.0*sin((p.z+timeScaled)*30.0);
-    //r += iMouse.y / screen_size.y;
-    
-    
-    return length(p)-r;
+    return length(position)-radius; 
 }
 
 float sdPlane( vec3 p )
 {
     return p.y;
+}
+
+float sdRoundBox( vec3 p, vec3 b, float r )
+{
+  vec3 q = abs(p) - b + r;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
+}
+
+float sdCone( vec3 p, vec2 c, float h )
+{
+  float q = length(p.xz);
+  return max(dot(c.xy,vec2(q,p.y)),-h-p.y);
 }
 
 vec2 iBox( in vec3 ro, in vec3 rd, in vec3 rad )

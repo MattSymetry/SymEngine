@@ -10,9 +10,7 @@ struct SceneDescription {
     alignas(16) glm::vec4 viewport;
     alignas(4) float camera_roll;
     alignas(4) float camera_fov;
-    alignas(4) int sphereCount;
-    alignas(4) int boxCount;
-    alignas(4) int coneCount;
+    alignas(4) int sceneSize;
 };
 
 class Scene {
@@ -37,7 +35,7 @@ public:
     void UpdateViewport(glm::vec4 viewport);
 
     void RemoveSceneGraphNode(SceneGraphNode* node);
-    void AddEmpty(SceneGraphNode* parent = nullptr);
+    void AddEmpty(SceneGraphNode* parent = nullptr, bool isObject = false);
     void AddSphere(glm::vec3 position, float radius, glm::vec3 color);
 
     SceneGraphNode* GetSceneGraph() { return &m_sceneGraph; }
@@ -45,16 +43,21 @@ public:
     void SetSelectedId(int id) { m_selectedObjectId = id; }
     SceneGraphNode* GetSceneGraphNode(int id);
     SceneGraphNode* GetSelectedNode();
+    void updateNodeData();
     
-private:
     Camera m_camera;
+private:
     int m_deltaTime;
     std::vector<SceneGraphNode*> m_sceneGraphNodes;
     SceneGraphNode m_sceneGraph;
     int m_selectedObjectId = 0;
+    int m_idCounter = 0;
     int m_sceneSize = 0;
+    static const int m_maxObjects = 50;
+    std::array<NodeData, m_maxObjects> m_nodeData;
+    void SerializeNode(SceneGraphNode* node, int parentIndex, int index);
     void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr);
     void SetupObjects();
     void UpdateObjectData();
-    SceneGraphNode* AddSceneGraphNode();
+    SceneGraphNode* AddSceneGraphNode(std::string name);
 };

@@ -33,11 +33,11 @@ void vkInit::ComputePipelineBuilder::specify_compute_shader(const char* filename
 
 	if (m_computeShader) {
         m_device.destroyShaderModule(m_computeShader);
-        m_computeShader = nullptr;
+        m_computeShader = nullptr; 
 	}
 
 	vkLogging::Logger::get_logger()->print("Create compute shader module");
-    m_computeShader = vkUtil::createModule(filename, m_device);
+    m_computeShader = vkUtil::createModule(filename, m_device); 
     m_computeShaderInfo = make_shader_info(m_computeShader, vk::ShaderStageFlagBits::eCompute);
 }
 
@@ -47,8 +47,8 @@ vk::PipelineShaderStageCreateInfo vkInit::ComputePipelineBuilder::make_shader_in
 	vk::PipelineShaderStageCreateInfo shaderInfo = {};
 	shaderInfo.flags = vk::PipelineShaderStageCreateFlags();
 	shaderInfo.stage = stage;
-	shaderInfo.module = shaderModule;
-	shaderInfo.pName = "main";
+	shaderInfo.module = shaderModule; 
+	shaderInfo.pName = "main";  
 	return shaderInfo;
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "ImGuizmo.h"
 #include "../common/config.h"
 #include "../engine/scene.h"
 
@@ -14,7 +15,9 @@ public:
 	void MenuBar();
 	glm::vec4 GetViewport();
 	void setTheme();
+	void Gizmo(Scene* scene);
 private:
+	ImGuiID dockspace_id;
 	glm::vec4 m_maskScene;
 	glm::vec4 m_maskCode;
 	glm::vec4 m_maskInspector;

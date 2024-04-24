@@ -1,4 +1,6 @@
+#pragma once
 #include "Editor.h"
+#include "glm/gtc/type_ptr.hpp"
 
 Editor::Editor()
 {
@@ -82,7 +84,7 @@ void Editor::Docker()
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
         static auto first_time = true;
@@ -106,8 +108,6 @@ void Editor::Docker()
             ImGui::DockBuilderFinish(dockspace_id);
         }
     }
-
-    ImGui::End();
 }
 
 void Editor::getScene(Scene* scene)
@@ -126,7 +126,9 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
 
         bool nodeOpen = draw;
         bool destroyEntity = destroy;
-        bool createEntity = false;
+        bool createGroup = false;
+        bool createObject = false;
+        bool isGroup = node->isGroup();
         int id = node->getId();
         int selectedId = scene->GetSelectedId();
 
@@ -157,15 +159,11 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
 
             if (ImGui::BeginPopup(entityPopupName.c_str()))
             {
-                const std::string entityMenuName = "Entity Menu " + std::to_string(id);
-                enum class EntityMenuComboItem
-                {
-                    ADD_EMPTY_ENTITY,
-                    DELETE_ENTITY,
-                    LENGTH,
-                };
-
-                std::vector<std::string> menuItems = { "Add Empty Object" };
+                std::vector<std::string> menuItems = {};
+                if (isGroup) {
+                    menuItems.push_back("Add Group");
+                	menuItems.push_back("Add Object");
+                }
                 if (id != 0)
                 {
                     menuItems.push_back("Delete Object");
@@ -178,9 +176,13 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                     {
                         if (i == 0)
                         {
-                            createEntity = true;
+                            createGroup = true;
                         }
-                        else if (id != 0 && i == 1)
+						else if (i == 1)
+						{
+							createObject = true;
+						}
+                        else if (id != 0 && i == 2)
                         {
                             destroyEntity = true;
                         }
@@ -206,7 +208,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                 }
             }
 
-            if (ImGui::BeginDragDropTarget())
+            if (ImGui::BeginDragDropTarget() && isGroup)
             {
                 ImGuiDragDropFlags targetFlags = 0;
                 if (const ImGuiPayload* payload =
@@ -215,6 +217,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                     SceneGraphNode* moveFrom = *(SceneGraphNode**) payload->Data;
                     SceneGraphNode* moveTo = node;
                     moveFrom->setParent(moveTo);
+                    scene->updateNodeData();
                 }
                 ImGui::EndDragDropTarget();
             }
@@ -232,10 +235,14 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
             }
         }
 
-        if (createEntity)
+        if (createGroup)
         {
-            scene->AddEmpty(node);
+            scene->AddEmpty(node, false);
         }
+        else if (createObject)
+		{
+			scene->AddEmpty(node, true);
+		}
 
         if (destroyEntity) { scene->SetSelectedId(node->getParent()->getId()); scene->RemoveSceneGraphNode(node); }
         if (nodeOpen && !leaf) { ImGui::TreePop(); }
@@ -250,12 +257,14 @@ void Editor::getInspector(Scene* scene)
         if (node != nullptr)
         {
 			ImGui::Begin("Inspector");
+            float avail = ImGui::GetContentRegionAvail().x;
             
             
             char nameBuffer[256];
             std::strncpy(nameBuffer, node->getName().c_str(), sizeof(nameBuffer));
             nameBuffer[sizeof(nameBuffer) - 1] = 0;
-            if (ImGui::InputText("Name", nameBuffer, sizeof(nameBuffer)))
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer)))
             {
 				node->rename(std::string(nameBuffer));
 			}
@@ -306,7 +315,99 @@ void Editor::getInspector(Scene* scene)
                 }
                 ImGui::EndDisabled();
             }
-            
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (node->isGroup())
+			{
+                float buttonWidth = avail * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
+				if (ImGui::Button("Add Group", ImVec2(buttonWidth, 0))){scene->AddEmpty(node, false);}
+                ImGui::SameLine();
+				if (ImGui::Button("Add Object", ImVec2(buttonWidth, 0))) {scene->AddEmpty(node, true);}
+			}
+            if (node->getId() != 0)
+			{
+                if (ImGui::Button("Delete", ImVec2(avail, 0))) {scene->RemoveSceneGraphNode(node);}
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (node->isGroup())
+            {
+                int currentBoolOperation = node->getBoolOperation();
+                char* BoolOperationsNames[] = { "Union", "Intersection", "Difference" };
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
+                    BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
+                    node->changeBoolOperation(operation);
+                }
+			}
+            else 
+            {
+                Shape* shape = node->getObject()->getComponent<Shape>();
+                int currentShapeId = static_cast<int>(shape->getType());
+                char* ShapeNames[] = { "Spehre", "Box", "Cone" };
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::Combo("##Shape", &currentShapeId, ShapeNames, IM_ARRAYSIZE(ShapeNames))) {
+                    Type newType = static_cast<Type>(currentShapeId);
+                    shape->setType(newType);
+                }
+
+                ImGui::Spacing();
+
+                switch (shape->getType())
+                {
+                case Type::Sphere: {
+					Sphere sphere = shape->shape.sphere;
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
+                    ImGui::Text("Radius"); ImGui::SameLine();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::InputFloat("##Radius", &sphere.radius)) {
+						shape->shape.sphere = sphere;
+					}
+                    }
+					break;
+                case Type::Box: {
+                    Box box = shape->shape.box;
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
+                    ImGui::Text("Size"); ImGui::SameLine();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::InputFloat3("##Size", &box.size[0])) {
+						shape->shape.box = box;
+					}
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
+                    ImGui::Text("Rounding"); ImGui::SameLine();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::InputFloat("##Rounding", &box.cornerRadius)) {
+                        shape->shape.box = box;
+                    }
+                    }
+                    break;
+                case Type::Cone: {
+                    Cone cone = shape->shape.cone;
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
+                    ImGui::Text("Height"); ImGui::SameLine();
+					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::InputFloat("##Height", &cone.height)) {
+						shape->shape.cone = cone;
+					}
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
+                    ImGui::Text("Angle"); ImGui::SameLine();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::InputFloat("##Angle", &cone.angle)) { 
+                        shape->shape.cone = cone;
+                    }
+                    }
+					break;
+                default:
+                    break;
+                }
+            }
+     
 			ImGui::End();
 		}
     }
@@ -401,6 +502,31 @@ void Editor::MenuBar()
 
     m_menuBarHeight = ImGui::GetFrameHeight();
 }
+
+void Editor::Gizmo(Scene* scene)
+{
+    // No need to reapply style inside the window, just set up once before ImGui::Begin()
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::SetDrawlist();
+
+    float windowWidth = (float)ImGui::GetWindowWidth();
+    float windowHeight = (float)ImGui::GetWindowHeight();
+    ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
+
+    if (scene->GetSelectedId() != 0) { 
+        glm::mat4 trans = scene->GetSelectedNode()->getTransform()->getWorldTransform();
+        glm::vec3 position = trans[2];
+        //position *= 0.01f;
+        glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+        glm::mat4 viewMatrix = scene->m_camera.getViewMatrix();
+        glm::mat4 projMatrix = scene->m_camera.getProjectionMatrix();
+        ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
+            ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, glm::value_ptr(transform));
+        scene->GetSelectedNode()->getTransform()->setWorldPosition(glm::vec3(transform[3]));
+    }
+    ImGui::End();
+}
+
 
 void  Editor::setTheme()
 {

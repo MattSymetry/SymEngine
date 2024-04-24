@@ -2,12 +2,13 @@
 
 SceneGraphNode::SceneGraphNode(int id, bool hasObject, SceneGraphNode* parent, std::string name) : m_parent(parent) {
 	m_id = id;
+	m_dataId = id;
 	m_name = name;
 	m_hasObject = hasObject;
 	if (m_parent) {
 		m_parent->addChild(this);
 		this->getTransform()->updateWorldSpace(parent->getTransform()->getTransform());
-	}
+	} 
 }
 
 void SceneGraphNode::addChild(SceneGraphNode* child) {
@@ -56,4 +57,27 @@ SceneGraphNode::~SceneGraphNode() {
 	if (m_parent) {
 		m_parent->removeChild(this);
 	}
+}
+
+void SceneGraphNode::changeBoolOperation(BoolOperatios operation) {
+	m_boolOperation = operation;
+	m_data.data1.x = operation;
+}
+
+NodeData* SceneGraphNode::getData() {
+	m_data.data0.x = m_dataId;
+	m_data.data0.y = (m_parent != nullptr) ? m_parent->getDataId() : -1;
+	//m_data.data0.z = -1;
+	m_data.data0.w = m_children.size();
+	m_data.data1.x = m_boolOperation;
+	m_data.data1.y = m_isGroup;
+	m_data.transform = m_transform.getWorldTransform();
+	if (m_hasObject) {
+		m_data.object = m_gameObject->getData();
+	}
+	else {
+		m_data.object = {};
+	}
+	
+	return &m_data;
 }

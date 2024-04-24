@@ -45,3 +45,15 @@ target_sources(imgui PRIVATE
   )
 
 target_link_libraries(imgui PUBLIC Vulkan::Vulkan sdl2)
+
+# ImGuizmo library setup
+add_library(ImGuizmo STATIC)
+target_include_directories(ImGuizmo PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/ImGuizmo
+)
+target_sources(ImGuizmo PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/ImGuizmo/ImGuizmo.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ImGuizmo/ImGuizmo.cpp
+)
+# As ImGuizmo relies on ImGui, it needs to link against it
+target_link_libraries(ImGuizmo PUBLIC imgui)

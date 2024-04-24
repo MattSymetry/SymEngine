@@ -1,5 +1,8 @@
+#pragma once
 #include "buffer.h"
 #include "memory.h"
+#include "../../scene.h"
+
 
 Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size_t size, vk::BufferUsageFlags usage) {
 
@@ -39,14 +42,13 @@ void Buffer::create_resources(vk::Device logicalDevice) {
 void Buffer::blit(void* data, size_t size, vk::Queue queue, vk::CommandBuffer commandBuffer, vk::Fence fence) {
 
 	memcpy(writeLocation, data, size);
-
-	vkUtil::copyBuffer(
+	vkUtil::copyBuffer( 
                        stagingBuffer, buffer, size,
 		queue, commandBuffer, fence
 	);
 
 }
-
+ 
 void Buffer::destroy(vk::Device logicalDevice) {
 
 	logicalDevice.unmapMemory(stagingMemory);

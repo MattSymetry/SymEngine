@@ -11,9 +11,12 @@ private:
 	float m_speed;
 	float m_sensitivity;
 	float m_scrollSpeed;
+	float m_aspectRatio;
+	glm::mat4 viewMatrix;
+	glm::mat4 projectionMatrix;
 public:
 	Camera();
-	Camera(glm::vec3 position, glm::vec3 target, float roll, float fov);
+	Camera(glm::vec3 position, glm::vec3 target, float roll, float fov, float aspectRatio);
 	~Camera();
 	void Reset();
 	void Move(glm::vec3 dir, float deltaTime);
@@ -32,4 +35,10 @@ public:
 	float getSensitivity();
 	float getScrollSpeed();
 	void setScrollSpeed(float scrollSpeed);
+	void updateViewMatrix();
+	glm::mat4 getViewMatrix();
+	void updateProjectionMatrix(float aspectRatio);
+	glm::mat4 getProjectionMatrix();
+	void setAspectRatio(float aspectRatio);
+	float getAspectRatio();
 	};

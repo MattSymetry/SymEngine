@@ -14,7 +14,7 @@ add_executable(SymEngineEditor ${EDITOR_SOURCES} ${EDITOR_HEADERS})
 
 #target_link_libraries(SymEngineEditor SymEngine)
 
-target_link_libraries(SymEngineEditor glm imgui)
+target_link_libraries(SymEngineEditor glm imgui ImGuizmo)
 
 target_link_libraries(SymEngineEditor Vulkan::Vulkan sdl2)
 
