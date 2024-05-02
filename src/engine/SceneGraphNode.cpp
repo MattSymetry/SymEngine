@@ -66,6 +66,7 @@ void SceneGraphNode::changeBoolOperation(BoolOperatios operation) {
 
 NodeData* SceneGraphNode::getData() {
 	m_data.data0.x = m_dataId;
+	m_data.data1.z = m_id;
 	m_data.data0.y = (m_parent != nullptr) ? m_parent->getDataId() : -1;
 	//m_data.data0.z = -1;
 	m_data.data0.w = m_children.size();

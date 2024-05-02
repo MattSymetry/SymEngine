@@ -1,16 +1,15 @@
-vec2 smin( float a, float b, float k )
+float smin( float a, float b, float k )
 {
-    float h = max( k-abs(a-b), 0.0 )/k;
-    float m = h*h*0.5;
-    float s = m*k*(1.0/2.0);
-    return (a<b) ? vec2(a-s,m) : vec2(b-s,1.0-m);
+    float h = max(k-abs(a-b),0.0);
+    return min(a, b) - h*h*0.25/k;
 }
 
 vec2 opU( vec2 d1, vec2 d2, float s )
 {
     if (s > 0.0) {
-        vec2 tmp = smin(d1.x, d2.x, s);
-        return vec2(tmp.x, 4);
+        vec2 tmp = vec2(0.0, 4);
+        tmp.x = smin(d1.x, d2.x, s);
+        return tmp;
     }
     
     return (d1.x<d2.x) ? d1 : d2;
@@ -18,11 +17,17 @@ vec2 opU( vec2 d1, vec2 d2, float s )
 
 vec2 opS( vec2 d1, vec2 d2, float s )
 {
-    return -opU(d1,-d2,s);
+
+    vec2 res = opU(d1,-d2,s);
+    res.x *= -1.0;
+    return res;
 }
 
 vec2 opI( vec2 d1, vec2 d2, float s )
 {
-    return -opU(-d1,-d2,s);
+    float a = d1.x;
+    float b = d2.x;
+    vec2 u = max(vec2(s + a,s + b), vec2(0));
+	return vec2(min(-s, max (a, b)) + length(u), 4);
 }
 

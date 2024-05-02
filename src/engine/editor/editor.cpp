@@ -287,12 +287,6 @@ void Editor::getInspector(Scene* scene)
                 if (ImGui::InputFloat3("##Rotation", &rotation[0])) {
                     transform->setRotation(rotation);
                 }
-                ImGui::BeginDisabled();
-                ImGui::Text("Scale   "); ImGui::SameLine();
-                if (ImGui::InputFloat3("##Scale", &scale[0])) {
-                    transform->setScale(scale);
-                }
-                ImGui::EndDisabled();
             }
 
             if (ImGui::CollapsingHeader("Global Transform")) {
@@ -308,12 +302,6 @@ void Editor::getInspector(Scene* scene)
                 if (ImGui::InputFloat3("##GRotation", &rotation[0])) {
                     transform->setWorldRotation(rotation);
                 }
-                ImGui::BeginDisabled();
-                ImGui::Text("Scale   "); ImGui::SameLine();
-                if (ImGui::InputFloat3("##GScale", &scale[0])) {
-                    //transform->setScale(scale);
-                }
-                ImGui::EndDisabled();
             }
 
             ImGui::Spacing();
@@ -406,7 +394,35 @@ void Editor::getInspector(Scene* scene)
                 default:
                     break;
                 }
+
             }
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            ImGui::Text("DEBUG");
+            ImGui::Text("ID: %d", node->getId());
+            ImGui::SameLine();
+            ImGui::Text("IDScn: %d", node->getDataId());
+            if (node->getParent() != nullptr)
+            {
+                ImGui::Text("Parent: %s", node->getParent()->getName().c_str());
+            }
+            else
+            {
+                ImGui::Text("Parent: None");
+            }
+            ImGui::Text("Children: %d", node->getChildren().size());
+            if (node->getChildren().size() > 0) {
+                ImGui::Text("CHild id: %d", node->getData()->data0.z);
+                ImGui::Text("Children: ");
+				for (auto child : node->getChildren())
+				{
+					ImGui::SameLine();
+					ImGui::Text("%s", child->getName().c_str());
+				}
+            }
+            ImGui::Text("IsGroup: %d", node->isGroup());
      
 			ImGui::End();
 		}
@@ -442,6 +458,19 @@ void Editor::SettingsPanel(Scene* scene)
         m_maskScene = glm::vec4(0.0f);
     }
     ImGui::Text("Hello, Lighting!");
+    std::array<NodeData, 50> nodeData = scene->GetNodeData();
+    for (int i = 0; i < 10; i++)
+    {
+        glm::vec3 position = nodeData[i].transform[2];
+		ImGui::InputInt("ID", &nodeData[i].data0.x);
+        ImGui::InputInt("realID", &nodeData[i].data1.z);
+		ImGui::InputInt("Parent", &nodeData[i].data0.y);
+		ImGui::InputInt("FirstChild:", &nodeData[i].data0.z);
+        ImGui::InputInt("ChildCount:", &nodeData[i].data0.w);
+		ImGui::InputInt("IsGroup:", &nodeData[i].data1.y);
+        ImGui::InputFloat3("##pos", &position[0]);
+        ImGui::Text("Data-----------------------------");
+    }
     ImGui::End();
     //--------------------------------------------------------------------------
     ImGui::Begin("Code", nullptr, flags);

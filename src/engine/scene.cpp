@@ -58,14 +58,15 @@ void Scene::Update(int deltaTime) {
     
     for (int i = 0; i < m_sceneSize; i++) {
         NodeData* data = &m_nodeData[i];
-        SceneGraphNode* node = GetSceneGraphNode(data->data0.x);
+        SceneGraphNode* node = GetSceneGraphNode(data->data1.z);
         if (node) {
-            node->setDataId(i);
-            data->data0.x = i;
-            data->data0.y = node->getParent() ? node->getParent()->getDataId() : -1;
-            data->data0.z = i + 1;
-            data->data0.w = node->getChildren().size();
+            //node->setDataId(i);
+            //data->data0.x = i;
+            //data->data0.y = node->getParent() ? node->getParent()->getDataId() : -1;
+            //data->data0.z = i + 1;
+            //data->data0.w = node->getChildren().size();
             data->transform = node->getTransform()->getWorldTransform();
+           
             if (!node->isGroup()) {
                 data->object = node->getObject()->getData();
             }
@@ -94,7 +95,9 @@ void Scene::updateNodeData() {
 void Scene::SerializeNode(SceneGraphNode* node, int parentIndex, int index) {
     if (node == nullptr) {
         return; 
-    } 
+    }
+    m_tmpNodeIndex++;
+    if (index == 0) m_tmpNodeIndex = 0;
     NodeData* data = node->getData(); 
     node->setDataId(index);
     data->data0.y = parentIndex;
@@ -102,10 +105,17 @@ void Scene::SerializeNode(SceneGraphNode* node, int parentIndex, int index) {
     auto children = node->getChildren();
     data->data0.w = children.size();
 
-    //m_nodeData.push_back(*data);
+    data->data1.x = node->getBoolOperation();
+    data->data1.y = node->isGroup();
+    if (!data->data1.y) {
+        data->object = node->getObject()->getData();
+    }
+    data->transform = node->getTransform()->getWorldTransform();
+
+    //m_nodeData.push_back(*data); s
     m_nodeData[index] = *data;
     for (size_t i = 0; i < children.size(); ++i) {
-        SerializeNode(children[i], index, index+1+i);
+        SerializeNode(children[i], index, m_tmpNodeIndex+1);
     }
 
     if (children.empty()) {

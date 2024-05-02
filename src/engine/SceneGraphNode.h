@@ -11,7 +11,7 @@ enum BoolOperatios {
 
 struct NodeData {
 	glm::ivec4 data0;//id, parent, first, count
-	glm::ivec4 data1;// operator, group, padding[2]
+	glm::ivec4 data1;// operator, group, sceneID, padding[1]
 	glm::mat4 transform; 
 	glm::mat4 object;
 };

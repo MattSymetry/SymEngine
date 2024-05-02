@@ -44,9 +44,10 @@ public:
     SceneGraphNode* GetSceneGraphNode(int id);
     SceneGraphNode* GetSelectedNode();
     void updateNodeData();
-    
+    std::array<NodeData, 50> GetNodeData() { return m_nodeData; }
     Camera m_camera;
 private:
+    int m_tmpNodeIndex = 0;
     int m_deltaTime;
     std::vector<SceneGraphNode*> m_sceneGraphNodes;
     SceneGraphNode m_sceneGraph;
