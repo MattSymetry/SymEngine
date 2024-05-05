@@ -5,10 +5,11 @@ layout(set = 0, binding = 2) uniform timeUniform {int myInt;} unscaledTime; // t
 float time = float(unscaledTime.myInt) / 40.0;
 
 struct NodeData {
-    ivec4 data0;//id, parent, first, count
-    ivec4 data1;// operator, group, padding[2]
+    ivec4 data0;//childCount, childStart, operation, sceneID
+    //ivec4 data1;// operator, group, padding[2]
     mat4 transform;
     mat4 obejctData;
+    vec4 color;
 };
 
 layout(std140, binding = 3) buffer ObjectBuffer {
@@ -29,6 +30,10 @@ layout(set = 0, binding = 1) uniform UBO {
     float camera_roll;
     float camera_fov;
     int sceneSize;
+    vec4 backgroundColor;
+    vec4 sunPos;
+    float outlineTickness;
+    vec4 outlineCol;
 } SceneData;
 
 float dot2( in vec2 v ) { return dot(v,v); }

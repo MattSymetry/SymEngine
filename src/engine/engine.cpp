@@ -214,6 +214,7 @@ void Engine::init_imgui()
 	std::string executableDir = vkUtil::getExecutableDirectory();
 	executableDir += "/assets/fonts/RobotoMono-Regular.ttf";
 	ImFont* myFont = io.Fonts->AddFontFromFileTTF(executableDir.data(), 16.0f);
+	ImFont* myFontSmall = io.Fonts->AddFontFromFileTTF(executableDir.data(), 14.0f);
 	io.Fonts->Build();
 
     ImGui_ImplSDL2_InitForVulkan(m_window);

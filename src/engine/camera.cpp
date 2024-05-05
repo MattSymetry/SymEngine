@@ -51,6 +51,7 @@ void Camera::LookAt(glm::vec3 target) {
 
 void Camera::Move(glm::vec3 dir, float deltaTime) {
 	m_position += dir * m_speed * deltaTime;
+	//m_target += dir * m_speed * deltaTime;
 	updateViewMatrix();
 	updateProjectionMatrix(16.0f / 9.0f);
 }

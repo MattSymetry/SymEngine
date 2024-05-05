@@ -8,7 +8,8 @@ SceneGraphNode::SceneGraphNode(int id, bool hasObject, SceneGraphNode* parent, s
 	if (m_parent) {
 		m_parent->addChild(this);
 		this->getTransform()->updateWorldSpace(parent->getTransform()->getTransform());
-	} 
+	}
+	m_color = glm::vec4(1.0f);
 }
 
 void SceneGraphNode::addChild(SceneGraphNode* child) {
@@ -61,17 +62,15 @@ SceneGraphNode::~SceneGraphNode() {
 
 void SceneGraphNode::changeBoolOperation(BoolOperatios operation) {
 	m_boolOperation = operation;
-	m_data.data1.x = operation;
+	m_data.data0.z = operation;
 }
 
 NodeData* SceneGraphNode::getData() {
 	m_data.data0.x = m_dataId;
-	m_data.data1.z = m_id;
-	m_data.data0.y = (m_parent != nullptr) ? m_parent->getDataId() : -1;
-	//m_data.data0.z = -1;
-	m_data.data0.w = m_children.size();
-	m_data.data1.x = m_boolOperation;
-	m_data.data1.y = m_isGroup;
+	m_data.data0.y = (m_parent != nullptr) ? m_parent->getDataId() : -1; // TODO
+	m_data.data0.z = m_parent ? m_parent->getBoolOperation() : -1;
+	m_data.data0.w = m_id;
+	m_data.color = m_color;
 	m_data.transform = m_transform.getWorldTransform();
 	if (m_hasObject) {
 		m_data.object = m_gameObject->getData();

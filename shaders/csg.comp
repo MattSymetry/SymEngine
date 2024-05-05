@@ -4,10 +4,23 @@ float smin( float a, float b, float k )
     return min(a, b) - h*h*0.25/k;
 }
 
-vec2 opU( vec2 d1, vec2 d2, float s )
+vec3 smin( float aa, float bb, vec3 a, vec3 b, float k )
+{
+    float h = max(k-abs(aa-bb),0.0);
+    return mix(a, b, h*h*0.25/k);
+}
+
+float sminCol( float a, float b, float k )
+{
+    float h = max( k-abs(a-b), 0.0 )/k;
+    float m = h*h*h*0.5;
+    return (a<b) ? m : 1.0-m;
+}
+
+vec4 opU( vec4 d1, vec4 d2, float s )
 {
     if (s > 0.0) {
-        vec2 tmp = vec2(0.0, 4);
+        vec4 tmp = vec4(0.0, mix(d1.yzw, d2.yzw, sminCol(d1.x, d2.x, s)));
         tmp.x = smin(d1.x, d2.x, s);
         return tmp;
     }
@@ -15,19 +28,19 @@ vec2 opU( vec2 d1, vec2 d2, float s )
     return (d1.x<d2.x) ? d1 : d2;
 }
 
-vec2 opS( vec2 d1, vec2 d2, float s )
+vec4 opS( vec4 d1, vec4 d2, float s )
 {
-
-    vec2 res = opU(d1,-d2,s);
+    d2.x = -d2.x;
+    vec4 res = opU(d1,d2,s);
     res.x *= -1.0;
     return res;
 }
 
-vec2 opI( vec2 d1, vec2 d2, float s )
+vec4 opI( vec4 d1, vec4 d2, float s )
 {
     float a = d1.x;
     float b = d2.x;
     vec2 u = max(vec2(s + a,s + b), vec2(0));
-	return vec2(min(-s, max (a, b)) + length(u), 4);
+	return vec4(min(-s, max (a, b)) + length(u), mix(d1.yzw, d2.yzw, sminCol(d1.x, d2.x, s)));
 }
 

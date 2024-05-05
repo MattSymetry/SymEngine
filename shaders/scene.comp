@@ -1,30 +1,29 @@
-vec2 calcObj (vec3 pos, NodeData node)
+vec4 calcObj (vec3 pos, NodeData node)
 {
     vec3 objPos = node.transform[2].xyz;
     vec3 objRot = node.transform[1].xyz;
-    vec3 objScale = node.transform[0].xyz;
-    vec2 obj;
+    vec4 obj;
 
     if (node.obejctData[3].w == 0) { // Sphere
-        obj = vec2( sdSphere(pos-objPos, node.obejctData[0].x), 4 );
+        obj = vec4( sdSphere(pos-objPos, node.obejctData[0].x), node.color.xyz );
     }
     else if (node.obejctData[3].w == 1) { // Box
-        obj = vec2( sdRoundBox(pos-objPos, node.obejctData[0].xyz, node.obejctData[0].w), 4 );
+        obj = vec4( sdRoundBox(pos-objPos, node.obejctData[0].xyz, node.obejctData[0].w), node.color.xyz );
     }
     else if (node.obejctData[3].w == 2) { // Cone
-        node.obejctData[0].y = radians(node.obejctData[0].y);
+        node.obejctData[0].y = radians(90.0-node.obejctData[0].y);
         objPos.y += node.obejctData[0].x;
-        obj = vec2( sdCone(pos-objPos, vec2(sin(node.obejctData[0].y), cos(node.obejctData[0].y)), node.obejctData[0].x), 4 );
+        obj = vec4( sdCone(pos-objPos, vec2(sin(node.obejctData[0].y), cos(node.obejctData[0].y)), node.obejctData[0].x), node.color.xyz );
     }
 
     return obj;
 }
 
-vec2 applyOperation(int operation, vec2 a, vec2 b) {
+vec4 applyOperation(int operation, vec4 a, vec4 b) {
     if (operation == 0) {
         a = opU(a, b, 0.1);
     } else if (operation == 1) {
-        a = opI(a, b, 0.2);
+        a = opI(a, b, 0.1);
     } else if (operation == 2) {
         a = opS(a, b, 0.1);
     }
@@ -33,95 +32,29 @@ vec2 applyOperation(int operation, vec2 a, vec2 b) {
 
 #define MAX_STACK_SIZE 50
 
-struct StackEntry {
-    int nodeIndex;
-    vec2 res;
-    bool isFirstChild;
-    int parentOperation;
-    bool isDone;
-};
-
-StackEntry createEntry(int nodeIndex, vec2 res, bool isFirstChild, int parentOperation) {
-    StackEntry entry;
-    entry.nodeIndex = nodeIndex;
-    entry.res = res;
-    entry.isFirstChild = isFirstChild;
-    entry.parentOperation = parentOperation;
-    entry.isDone = false;
-    return entry;
-}
-
-vec2 calcGroup(vec3 pos, int nodeId) {
-    StackEntry stack[MAX_STACK_SIZE];
-    int stackSize = 0;  
-    vec2 objects = vec2(1.0, 0.0);
-    stack[stackSize++] = createEntry(nodeId, vec2(1.0, 0.0), true, -1);
-
-    while (stackSize > 0) {
-        StackEntry entry = stack[--stackSize];
-        NodeData node = SceneNodes.nodes[entry.nodeIndex];
-
-        if (node.data1.y == 0) { // Object
-            vec2 obj = calcObj(pos, node);
-
-            if (entry.isFirstChild) {
-                entry.res = obj;
-            } else {
-                entry.res = applyOperation(entry.parentOperation, stack[stackSize-1].res, obj);
+vec4 calcGroup(vec3 pos, int nodeId) {
+    vec4 results[MAX_STACK_SIZE];
+    for (int i = 0; i < SceneData.sceneSize; ++i) {
+        NodeData node = SceneNodes.nodes[i];
+        if (node.data0.x > 0) { // not empty group
+            vec4 result = results[node.data0.y];
+            for (int j = 1; j < node.data0.x; ++j) {
+                int childIndex = node.data0.y + j;
+                result = applyOperation(SceneNodes.nodes[childIndex].data0.z, result, results[childIndex]);
             }
-            stack[stackSize] = entry;
-        }
-        else { // Group
-            if (!entry.isDone) {
-                stack[stackSize].isDone = true;
-                stack[stackSize].res = (stack[stackSize+1].res != null) ? stack[stackSize+1].res : vec2(1.0, 0.0);
-                stackSize++;
-                for (int i = node.data0.w - 1; i >= 0; --i) {
-                    stack[stackSize++] = createEntry(node.data0.z + i, vec2(1.0, 0.0), i == 0, node.data1.x);
-                }
-            }
-            else {
-                vec2 group = vec2(1.0, 0.0);
-                for (int i = 0; i < node.data0.w; ++i) {
-                    group = applyOperation(node.data1.x, group, stack[stackSize - node.data0.w + i].res);
-                }
-
-                if (entry.isFirstChild) {
-                    entry.res = group;
-                } else {
-                    entry.res = applyOperation(entry.parentOperation, stack[stackSize-1].res, group);
-                }
-                stack[stackSize] = entry;
-            }
-        }
-
-        if (!entry.isFirstChild) {
-            if (stackSize > 0 && SceneNodes.nodes[stack[stackSize-1].nodeIndex].data1.y == 1) {
-                // Combine with the parent group's accumulated result
-                StackEntry parent = stack[stackSize - 1];
-                parent.res = entry.res;
-            } else {
-                objects = entry.res;
-            }
+            results[i] = result;
+        } else { // object
+            results[i] = calcObj(pos, node);
         }
     }
-
-    return objects;
+    return results[SceneData.sceneSize - 1];
 }
 
-vec2 map(in vec3 pos) {
-    vec2 res = vec2(pos.y, 0.0);
-    vec2 objects = vec2(1.0, 0.0);
+vec4 map(in vec3 pos) {
+    vec4 res = vec4(1.0,0.0,0.0,0.0);
     NodeData node = SceneNodes.nodes[0];
-    int boolOperation = int(node.data1.x);
 
-    if (SceneData.sceneSize <= 1) {
-        return res;
-    }
-
-    objects = calcGroup(pos, 0);
-
-    res = opU(res, objects, 0.0);
+    res = calcGroup(pos, 0);
 
     return res;
 }

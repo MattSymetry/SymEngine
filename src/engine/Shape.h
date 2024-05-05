@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 
 struct ShapeDataStruct {
     int type;
@@ -16,21 +17,26 @@ struct Box {
     glm::vec3 size = glm::vec3(0.4f);
     float cornerRadius = 0.1f;
     Box() {
-		size = glm::vec3(0.4f);
+		size = glm::vec3(0.2f);
 		cornerRadius = 0.1f;
 	}
 };
 
 struct Cone {
     float height = 0.5f;
-    float angle = 70.0f;
+    float angle = 15.0f;
     Cone() {
         height = 0.5f;
-        angle = 70.0f;
+        angle = 15.0f;
     }
 };
 
-enum class Type { Sphere = 0, Box = 1, Cone = 2 };
+enum class Type { Sphere = 0, Box = 1, Cone = 2};
+static const std::map<std::string, Type> NameToTypeMap = {
+    {"Sphere", Type::Sphere},
+    {"Box", Type::Box},
+    {"Cone", Type::Cone}
+};
 class Shape : public Component {
 public:
     ShapeDataStruct m_shapeData;
@@ -163,4 +169,18 @@ public:
                 break;
         }
     }
+
+    // static function that creates a shape from a Type
+    static Shape createShape(Type t) {
+		switch (t) {
+			case Type::Sphere:
+				return Shape(Sphere());
+			case Type::Box:
+				return Shape(Box());
+			case Type::Cone:
+				return Shape(Cone());
+		}
+	}
+
+
 };

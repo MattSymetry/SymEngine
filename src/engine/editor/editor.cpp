@@ -112,11 +112,50 @@ void Editor::Docker()
 
 void Editor::getScene(Scene* scene)
 {
-	if (scene != nullptr)
-	{
+    if (scene != nullptr)
+    {
         SceneGraphNode* sceneGraph = scene->GetSceneGraph();
         DrawSceneGraphNode(sceneGraph, true, false, scene);
-	}
+
+        bool createGroup = false;
+        bool createObject = false;
+        Type objectType = Type::Sphere;
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseReleased(1)) {
+            ImGui::OpenPopup("Scene Popup");
+        }
+        if (ImGui::BeginPopup("Scene Popup"))
+        {
+            if (ImGui::Selectable("Add Group"))
+            {
+                createGroup = true;
+                ImGui::CloseCurrentPopup();
+            }
+            if (ImGui::BeginMenu("Add Object"))
+            {
+                // List of all object types you can add
+                for (const auto& object : NameToTypeMap)
+                {
+                    if (ImGui::Selectable(object.first.c_str()))
+                    {
+                        createObject = true;
+                        objectType = NameToTypeMap.find(object.first)->second;
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndPopup();
+        }
+
+        if (createGroup)
+        {
+            scene->AddEmpty(sceneGraph, false);
+        }
+        else if (createObject)
+        {
+            scene->AddEmpty(sceneGraph, true, objectType);
+        }
+    }
 }
 
 void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, Scene* scene)
@@ -131,6 +170,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
         bool isGroup = node->isGroup();
         int id = node->getId();
         int selectedId = scene->GetSelectedId();
+        Type objectType = Type::Sphere;
 
         const bool leaf = node->isLeaf();
 
@@ -143,6 +183,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
             if (id == selectedId) { nodeFlags |= ImGuiTreeNodeFlags_Selected; }
 
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
+            nodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
             nodeOpen =
                 ImGui::TreeNodeEx((void*)(intptr_t)id, nodeFlags, "%s", node->getName().c_str());
             ImGui::PopItemWidth();
@@ -159,33 +200,33 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
 
             if (ImGui::BeginPopup(entityPopupName.c_str()))
             {
-                std::vector<std::string> menuItems = {};
-                if (isGroup) {
-                    menuItems.push_back("Add Group");
-                	menuItems.push_back("Add Object");
+                if (isGroup)
+                {
+                    if (ImGui::Selectable("Add Group"))
+                    {
+                        createGroup = true;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    if (ImGui::BeginMenu("Add Object"))
+                    {
+                        // List of all object types you can add
+                        for (const auto& object : NameToTypeMap)
+                        {
+                            if (ImGui::Selectable(object.first.c_str()))
+                            {
+                                createObject = true;
+                                objectType = NameToTypeMap.find(object.first)->second;
+                                ImGui::CloseCurrentPopup();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
                 }
                 if (id != 0)
                 {
-                    menuItems.push_back("Delete Object");
-                }
-
-                for (size_t i = 0; i < menuItems.size(); i++)
-                {
-                    const auto& itemName = menuItems[i];
-                    if (ImGui::Selectable(itemName.c_str()))
+                    if (ImGui::Selectable("Delete Object"))
                     {
-                        if (i == 0)
-                        {
-                            createGroup = true;
-                        }
-						else if (i == 1)
-						{
-							createObject = true;
-						}
-                        else if (id != 0 && i == 2)
-                        {
-                            destroyEntity = true;
-                        }
+                        destroyEntity = true;
                         ImGui::CloseCurrentPopup();
                     }
                 }
@@ -202,6 +243,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                     if (!(srcFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
                     {
                         ImGui::Text("Moving Entity \"%s\"", node->getName().c_str());
+                        m_isMovingElement = true;
                     }
                     ImGui::SetDragDropPayload("DND_DEMO_NAME", &node, sizeof(SceneGraphNode*));
                     ImGui::EndDragDropSource();
@@ -218,19 +260,44 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                     SceneGraphNode* moveTo = node;
                     moveFrom->setParent(moveTo);
                     scene->updateNodeData();
-                }
+                } 
                 ImGui::EndDragDropTarget();
+            }
+
+            if (ImGui::IsMouseReleased(0))
+			{
+				m_isMovingElement = false;
+			}
+            if (m_isMovingElement && selectedId != id && !isGroup)
+            {
+                ImVec4 buttonColor = ImVec4(0.5f, 0.5f, 0.5f, 0.4f);
+                ImVec4 hoverColor = ImVec4(0.8f, 0.8f, 0.8f, 0.6f);
+
+                ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
+                ImGui::Button("###after", ImVec2(ImGui::GetContentRegionAvail().x, 5.0f));
+                if (ImGui::BeginDragDropTarget()) {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_NAME")) {
+                        SceneGraphNode* draggedNode = *(SceneGraphNode**)payload->Data;
+                        scene->updateNodeData();
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+                ImGui::PopStyleColor(2);
             }
         }
 
         if (!leaf)
         {
+            float indentWidth = 10.0f;
             const auto& children = node->getChildren();
             for (auto nodeChild : children)
             {
                 if (nodeChild)
                 {
+                    ImGui::Indent(indentWidth);
                     DrawSceneGraphNode(nodeChild, nodeOpen, destroyEntity, scene);
+                    ImGui::Unindent(indentWidth);
                 }
             }
         }
@@ -241,11 +308,13 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
         }
         else if (createObject)
 		{
-			scene->AddEmpty(node, true);
+			scene->AddEmpty(node, true, objectType);
 		}
 
         if (destroyEntity) { scene->SetSelectedId(node->getParent()->getId()); scene->RemoveSceneGraphNode(node); }
-        if (nodeOpen && !leaf) { ImGui::TreePop(); }
+        if (nodeOpen && !leaf) { 
+            ImGui::TreePop(); 
+        }
 	}
 }
 
@@ -269,40 +338,52 @@ void Editor::getInspector(Scene* scene)
 				node->rename(std::string(nameBuffer));
 			}
 
-            ImGui::Spacing();
+            ImGui::Spacing(); 
             ImGui::Separator();
             ImGui::Spacing();
-
+             
             // Transform
+            char* TransformModeNames[] = { "Local Transform", "Global Transform"};
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::Combo("##Transform", &m_transformMode, TransformModeNames, IM_ARRAYSIZE(TransformModeNames));
             Transform* transform = node->getTransform();
-            if (ImGui::CollapsingHeader("Local Transform")) {
+            if (m_transformMode == 0) {
                 glm::vec3 position = transform->getPosition();
                 glm::vec3 rotation = transform->getRotation();
-                glm::vec3 scale = transform->getScale();
-                ImGui::Text("Position"); ImGui::SameLine();
-                if (ImGui::InputFloat3("##Position", &position[0])) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text("Position");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat3("##Position", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setPosition(position);
                 }
-                ImGui::Text("Rotation"); ImGui::SameLine();
-                if (ImGui::InputFloat3("##Rotation", &rotation[0])) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text("Rotation");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setRotation(rotation);
                 }
-            }
-
-            if (ImGui::CollapsingHeader("Global Transform")) {
+			}
+			else {
                 glm::mat4 globalTransform = transform->getWorldTransform();
                 glm::vec3 position = globalTransform[2];
                 glm::vec3 rotation = globalTransform[1];
-                glm::vec3 scale = globalTransform[0];
-                ImGui::Text("Position"); ImGui::SameLine();
-                if (ImGui::InputFloat3("##GPosition", &position[0])) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text("Position");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat3("##GPosition", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldPosition(position);
                 }
-                ImGui::Text("Rotation"); ImGui::SameLine();
-                if (ImGui::InputFloat3("##GRotation", &rotation[0])) {
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text("Rotation");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldRotation(rotation);
                 }
-            }
+			}
 
             ImGui::Spacing();
             ImGui::Separator();
@@ -324,24 +405,50 @@ void Editor::getInspector(Scene* scene)
             ImGui::Separator();
             ImGui::Spacing();
 
-            if (node->isGroup())
+            int currentBoolOperation = node->getBoolOperation();
+            char* BoolOperationsNames[] = { "Union", "Intersection", "Difference" };
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
+                BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
+                node->changeBoolOperation(operation);
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (!node->isGroup())
             {
-                int currentBoolOperation = node->getBoolOperation();
-                char* BoolOperationsNames[] = { "Union", "Intersection", "Difference" };
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
-                    BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
-                    node->changeBoolOperation(operation);
+                glm::vec4 color = node->getColor();
+                if (ImGui::ColorEdit3("Color", &color[0])) {
+                    node->setColor(color);
                 }
-			}
-            else 
+            }
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            if (!node->isGroup())
             {
                 Shape* shape = node->getObject()->getComponent<Shape>();
-                int currentShapeId = static_cast<int>(shape->getType());
-                char* ShapeNames[] = { "Spehre", "Box", "Cone" };
+                int currentShapeId = 0;
+                bool idFound = false;
+
+                std::vector<char*> shapeNames;
+                shapeNames.reserve(NameToTypeMap.size());
+                for (const auto& pair : NameToTypeMap) {
+                    shapeNames.push_back(const_cast<char*>(pair.first.c_str()));
+                    if (!idFound && pair.second != shape->getType()) {
+						currentShapeId++;
+                    }
+					else {
+						idFound = true;
+					}
+                }
+
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::Combo("##Shape", &currentShapeId, ShapeNames, IM_ARRAYSIZE(ShapeNames))) {
-                    Type newType = static_cast<Type>(currentShapeId);
+                if (ImGui::Combo("##Shape", &currentShapeId, shapeNames.data(), shapeNames.size())) {
+                    Type newType = NameToTypeMap.find(shapeNames[currentShapeId])->second;
                     shape->setType(newType);
                 }
 
@@ -354,7 +461,8 @@ void Editor::getInspector(Scene* scene)
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
                     ImGui::Text("Radius"); ImGui::SameLine();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputFloat("##Radius", &sphere.radius)) {
+                    if (ImGui::DragFloat("##Radius", &sphere.radius, 0.01f, 0.01f, 100.0f, "%.3f")) {
+                        if (sphere.radius < 0.01f) { sphere.radius = 0.01f; }
 						shape->shape.sphere = sphere;
 					}
                     }
@@ -364,15 +472,17 @@ void Editor::getInspector(Scene* scene)
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
                     ImGui::Text("Size"); ImGui::SameLine();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputFloat3("##Size", &box.size[0])) {
+                    if (ImGui::DragFloat3("##Size", &box.size[0], 0.01f, 0.01f, 100.0f, "%.3f")) {
+                        if (box.size.x < 0.01f) { box.size.x = 0.01f; }
 						shape->shape.box = box;
 					}
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
                     ImGui::Text("Rounding"); ImGui::SameLine();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputFloat("##Rounding", &box.cornerRadius)) {
-                        shape->shape.box = box;
-                    }
+                    if (ImGui::DragFloat("##Rounding", &box.cornerRadius, 0.01f, 0.0f, 100.0f, "%.3f")) {
+                        if (box.cornerRadius < 0.0f) { box.cornerRadius = 0.0f; }
+						shape->shape.box = box;
+					}
                     }
                     break;
                 case Type::Cone: {
@@ -380,13 +490,16 @@ void Editor::getInspector(Scene* scene)
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
                     ImGui::Text("Height"); ImGui::SameLine();
 					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputFloat("##Height", &cone.height)) {
+                    if (ImGui::DragFloat("##Height", &cone.height, 0.01f, 0.01f, 100.0f, "%.3f")) {
+                        if (cone.height < 0.01f) { cone.height = 0.01f; }
 						shape->shape.cone = cone;
 					}
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
                     ImGui::Text("Angle"); ImGui::SameLine();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputFloat("##Angle", &cone.angle)) { 
+                    if (ImGui::DragFloat("##Angle", &cone.angle, 0.1f, 1.0, 70.0, "%.3f")) {
+                        if (cone.angle < 1.0f) { cone.angle = 1.0f; }
+						else if (cone.angle > 70.0f) { cone.angle = 70.0f; }
                         shape->shape.cone = cone;
                     }
                     }
@@ -396,37 +509,43 @@ void Editor::getInspector(Scene* scene)
                 }
 
             }
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            ImGui::Text("DEBUG");
-            ImGui::Text("ID: %d", node->getId());
-            ImGui::SameLine();
-            ImGui::Text("IDScn: %d", node->getDataId());
-            if (node->getParent() != nullptr)
-            {
-                ImGui::Text("Parent: %s", node->getParent()->getName().c_str());
-            }
-            else
-            {
-                ImGui::Text("Parent: None");
-            }
-            ImGui::Text("Children: %d", node->getChildren().size());
-            if (node->getChildren().size() > 0) {
-                ImGui::Text("CHild id: %d", node->getData()->data0.z);
-                ImGui::Text("Children: ");
-				for (auto child : node->getChildren())
-				{
-					ImGui::SameLine();
-					ImGui::Text("%s", child->getName().c_str());
-				}
-            }
-            ImGui::Text("IsGroup: %d", node->isGroup());
      
-			ImGui::End();
+			ImGui::End(); 
 		}
     }
+}
+
+void Editor::getSettings(Scene* scene)
+{
+	if (scene != nullptr)
+	{
+        glm::vec4 color = scene->getBackgroundColor();
+        if (ImGui::ColorEdit3("Background Color", &color[0])) {
+            scene->setBackgroundColor(color);
+        }
+
+        ImGui::Spacing();
+
+        glm::vec4 sunPos = scene->getSunPosition();
+        if (ImGui::DragFloat3("Sun Position", &sunPos[0], 0.01f, -1.0f, 1.0f, "%.3f")) {
+			scene->setSunPosition(sunPos);
+		}
+
+        ImGui::Spacing();
+
+        float outlineThickness = scene->getOutlineThickness();
+        if (ImGui::DragFloat("Outline Thickness", &outlineThickness, 0.01f, 0.0f, 1.0f, "%.3f")) {
+			scene->setOutlineThickness(outlineThickness);
+		}
+
+		ImGui::Spacing();
+
+        glm::vec4 outlineColor = scene->getOutlineColor();
+		if (ImGui::ColorEdit3("Outline Color", &outlineColor[0])) {
+			scene->setOutlineColor(outlineColor);
+		}
+
+	}
 }
 
 void Editor::SettingsPanel(Scene* scene)
@@ -462,12 +581,10 @@ void Editor::SettingsPanel(Scene* scene)
     for (int i = 0; i < 10; i++)
     {
         glm::vec3 position = nodeData[i].transform[2];
-		ImGui::InputInt("ID", &nodeData[i].data0.x);
-        ImGui::InputInt("realID", &nodeData[i].data1.z);
-		ImGui::InputInt("Parent", &nodeData[i].data0.y);
-		ImGui::InputInt("FirstChild:", &nodeData[i].data0.z);
-        ImGui::InputInt("ChildCount:", &nodeData[i].data0.w);
-		ImGui::InputInt("IsGroup:", &nodeData[i].data1.y);
+        ImGui::InputInt("realID", &nodeData[i].data0.w);
+		ImGui::InputInt("ChildCount", &nodeData[i].data0.x);
+		ImGui::InputInt("FirstChild:", &nodeData[i].data0.y);
+        ImGui::InputInt("Operator:", &nodeData[i].data0.z);
         ImGui::InputFloat3("##pos", &position[0]);
         ImGui::Text("Data-----------------------------");
     }
@@ -498,7 +615,7 @@ void Editor::SettingsPanel(Scene* scene)
     {
         m_maskInspector = glm::vec4(0.0f);
     }
-    ImGui::Text("Hello, Settings!");
+    getSettings(scene);
     ImGui::End();
     //--------------------------------------------------------------------------
     ImGui::Begin("Inspector", nullptr, flags);
@@ -521,7 +638,17 @@ void Editor::MenuBar()
     if (ImGui::BeginMainMenuBar())
     {
         // Populate your menu bar here
-        if (ImGui::BeginMenu("Test"))
+        if (ImGui::BeginMenu("File"))
+        {
+            // Menu items
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Add"))
+        {
+            // Menu items
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Save"))
         {
             // Menu items
             ImGui::EndMenu();

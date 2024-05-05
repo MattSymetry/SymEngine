@@ -1,5 +1,6 @@
 #include "scene.h"
 #include <algorithm>
+#include <functional>
 
 Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
 {
@@ -13,7 +14,11 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     description.viewport = viewport; 
     description.camera_roll = m_camera.getRoll(); 
     description.camera_fov = m_camera.getFov();
-     description.sceneSize = m_sceneSize;
+    description.sceneSize = m_sceneSize;
+    description.backgroundColor = m_backgroundColor;
+    description.sunPos = m_sunPosition;
+    description.outlineTickness = m_outlineThickness;
+    description.outlineCol = m_outlineColor;
 
     m_viewport = viewport; 
     AddBuffer(sizeof(description), vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &description);
@@ -34,15 +39,27 @@ void Scene::SetupObjects() {
 }
 
 void Scene::KeyPressed(SDL_Keycode key) {
-    
+    // check if delete key is pressed
+    if (key == SDLK_DELETE) {
+		SceneGraphNode* node = GetSelectedNode();
+		if (node && node->getId() > 0) {
+			RemoveSceneGraphNode(node);
+		}
+	}
 }
  
 void Scene::KeyboardInput(Uint8* state) {
-
+    m_shiftPressed = state[SDL_SCANCODE_LSHIFT] || state[SDL_SCANCODE_RSHIFT];
 }
  
 void Scene::MouseInput(int x, int y) {
-    m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
+    if (false || m_shiftPressed) {
+		//m_camera.Move(glm::vec3(x, y, 0.0f), m_deltaTime / 1000.0);
+        //description.camera_target = m_camera.getTarget();
+    }
+    else {
+        m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
+    }
     description.camera_position = m_camera.getPosition();
 }
  
@@ -52,13 +69,13 @@ void Scene::MouseScroll(int y) {
 	description.camera_position = m_camera.getPosition(); 
 }
 
-void Scene::Update(int deltaTime) { 
+void Scene::Update(int deltaTime) {
     m_deltaTime = std::clamp(deltaTime, 0, 1000);
     frameCount ++;
     
     for (int i = 0; i < m_sceneSize; i++) {
         NodeData* data = &m_nodeData[i];
-        SceneGraphNode* node = GetSceneGraphNode(data->data1.z);
+        SceneGraphNode* node = GetSceneGraphNode(data->data0.w);
         if (node) {
             //node->setDataId(i);
             //data->data0.x = i;
@@ -72,8 +89,9 @@ void Scene::Update(int deltaTime) {
             }
             else
             {
-                data->data1.x = node->getBoolOperation();
             }
+            data->data0.z = node->getBoolOperation(); 
+            data->color = node->getColor();
             //std::cout << "Node " << i << " " << node->getName() << std::endl;
 		}
 	}
@@ -88,42 +106,58 @@ void Scene::UpdateViewport(glm::vec4 viewport) {
 }
 
 void Scene::updateNodeData() {
-    SerializeNode(&m_sceneGraph, -1, 0);
+    m_tmpNodeIndex = 0;
+    SerializeNode(&m_sceneGraph);
 	description.sceneSize = m_sceneSize;
 }
 
-void Scene::SerializeNode(SceneGraphNode* node, int parentIndex, int index) {
-    if (node == nullptr) {
+void Scene::SerializeNode(SceneGraphNode* root) {
+    if (root == nullptr) {
         return; 
     }
-    m_tmpNodeIndex++;
-    if (index == 0) m_tmpNodeIndex = 0;
-    NodeData* data = node->getData(); 
-    node->setDataId(index);
-    data->data0.y = parentIndex;
-    data->data0.z = index + 1;
-    auto children = node->getChildren();
-    data->data0.w = children.size();
+    if (!root->isGroup() || root->isLeaf()) {
+		//return; 
+	}
+    std::unordered_map<SceneGraphNode*, int> nodeToIndexMapping;
+    std::function<void(SceneGraphNode*)> PostOrderSerialize = [&](SceneGraphNode* node) {
+        if (node == nullptr) return;
 
-    data->data1.x = node->getBoolOperation();
-    data->data1.y = node->isGroup();
-    if (!data->data1.y) {
-        data->object = node->getObject()->getData();
-    }
-    data->transform = node->getTransform()->getWorldTransform();
+        for (SceneGraphNode* child : node->getChildren()) {
+            PostOrderSerialize(child);
+        } 
 
-    //m_nodeData.push_back(*data); s
-    m_nodeData[index] = *data;
-    for (size_t i = 0; i < children.size(); ++i) {
-        SerializeNode(children[i], index, m_tmpNodeIndex+1);
-    }
+        NodeData serializedNode;
+        serializedNode.data0.z = (node == root) ? -1 : node->getBoolOperation();
+        serializedNode.data0.y = m_tmpNodeIndex - node->getChildren().size();
+        serializedNode.data0.x = (node->isGroup()) ? node->getChildren().size() : -1;
+        serializedNode.data0.w = node->getId();
 
-    if (children.empty()) {
-        m_nodeData[index].data0.z = -1;
-    }
+        if (!node->isGroup()) { 
+            serializedNode.object = node->getObject()->getData();
+        }
+        serializedNode.transform = node->getTransform()->getWorldTransform();
+
+        // Add the current node to the serialized list
+        m_nodeData[m_tmpNodeIndex] = serializedNode;
+
+        // Map the original tree node to its index in the serialized array
+        nodeToIndexMapping[node] = m_tmpNodeIndex;
+        m_tmpNodeIndex++;
+    };
+     
+    PostOrderSerialize(root);
+
+    // Fix the childrenStartIndex for non-leaf nodes
+    for (int i = 0; i < m_sceneSize; i++) { 
+		NodeData& n = m_nodeData[i];
+        if (n.data0.x > 0) {
+            SceneGraphNode* firstChild = GetSceneGraphNode(n.data0.w)->getChildren()[0];
+            n.data0.y = nodeToIndexMapping[firstChild];
+		} 
+	}
 }
 
-void Scene::AddEmpty(SceneGraphNode* parent, bool isObject) {
+void Scene::AddEmpty(SceneGraphNode* parent, bool isObject, Type shapeType) {
     SceneGraphNode* node = AddSceneGraphNode((isObject ? "Object" : "Group"));
     if (parent) {
 		node->setParent(parent);
@@ -131,8 +165,7 @@ void Scene::AddEmpty(SceneGraphNode* parent, bool isObject) {
 	if (isObject) {
 		node->setIsGroup(false);
         GameObject* obj = new GameObject();
-        Sphere sphereShape;
-        obj->addComponent(new Shape(sphereShape));
+        obj->addComponent(new Shape(Shape::createShape(shapeType)));
         node->addObject(std::unique_ptr<GameObject>(obj));
 	}
     updateNodeData();

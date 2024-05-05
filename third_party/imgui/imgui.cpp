@@ -2036,7 +2036,7 @@ void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end,
         *out_buf = buf;
         *out_buf_end = buf + buf_len; // Disallow not passing 'out_buf_end' here. User is expected to use it.
     }
-    else
+    else 
     {
         int buf_len = ImFormatStringV(g.TempBuffer.Data, g.TempBuffer.Size, fmt, args);
         *out_buf = g.TempBuffer.Data;

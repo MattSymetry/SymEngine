@@ -17,6 +17,8 @@ public:
 	void setTheme();
 	void Gizmo(Scene* scene);
 private:
+	int m_transformMode = 0;
+	bool m_isMovingElement = false;
 	ImGuiID dockspace_id;
 	glm::vec4 m_maskScene;
 	glm::vec4 m_maskCode;
@@ -28,4 +30,5 @@ private:
 
 	void getScene(Scene* scene);
 	void getInspector(Scene* scene);
+	void getSettings(Scene* scene);
 };

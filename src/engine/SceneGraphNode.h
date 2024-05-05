@@ -10,10 +10,11 @@ enum BoolOperatios {
 };
 
 struct NodeData {
-	glm::ivec4 data0;//id, parent, first, count
-	glm::ivec4 data1;// operator, group, sceneID, padding[1]
+	glm::ivec4 data0;//childCount, childStart, operation, sceneID
+	//glm::ivec4 data1;// operator, group, sceneID, padding[1]
 	glm::mat4 transform; 
 	glm::mat4 object;
+	glm::vec4 color;
 };
 
 class SceneGraphNode {
@@ -30,6 +31,7 @@ private:
 	int m_id;
 	int m_dataId = -1;
 	std::string m_name;
+	glm::vec4 m_color;
 public:
 	SceneGraphNode(int id, bool hasObject = false, SceneGraphNode* parent = nullptr, std::string name = "");
 	~SceneGraphNode();
@@ -42,6 +44,7 @@ public:
 	void rename(std::string name);
 	void changeBoolOperation(BoolOperatios operation);
 	std::vector<SceneGraphNode*> getChildren() { return m_children; }
+	int getChildCount() { return m_children.size(); }
 	bool isLeaf() { return m_children.size() == 0; }
 	int getId() { return m_id; }
 	GameObject* getObject() { return m_gameObject.get(); }
@@ -54,4 +57,6 @@ public:
 	BoolOperatios getBoolOperation() { return m_boolOperation; }
 	int getDataId() { return m_dataId; }
 	void setDataId(int dataId) { m_dataId = dataId; m_data.data0.x = dataId; }
+	void setColor(glm::vec4 color) { m_color = color; m_data.color = color; }
+	glm::vec4 getColor() { return m_color; }
 };
