@@ -384,7 +384,7 @@ void Engine::render(Scene* scene) {
 	m_device.waitForFences(1, &(m_swapchainFrames[m_frameNumber].inFlight), VK_TRUE, UINT64_MAX);
 	m_device.resetFences(1, &(m_swapchainFrames[m_frameNumber].inFlight));
 
-	uint32_t imageIndex;
+	uint32_t imageIndex; 
 	try {
 		vk::ResultValue acquire = m_device.acquireNextImageKHR(
 			m_swapchain, UINT64_MAX,
@@ -502,6 +502,18 @@ void Engine::render(Scene* scene) {
 		recreate_swapchain(scene);
 		return;
 	}
+
+	// readback last buffer of frame
+	Buffer* readBackBuffer = &m_swapchainFrames[m_frameNumber].bufferSetups[m_swapchainFrames[m_frameNumber].bufferSetups.size() - 1].buffer;
+	void* tempPtr = nullptr;
+	vkMapMemory(m_device, readBackBuffer->deviceMemory, 0, 4, 0, &tempPtr);
+	if (tempPtr != nullptr) {
+		int* selectedIdPtr = (int*)tempPtr;
+		int selectedIdValue = *selectedIdPtr;
+		scene->hoverId = selectedIdValue;
+	}
+	vkUnmapMemory(m_device, readBackBuffer->deviceMemory);
+
 	m_frameNumber = (m_frameNumber + 1) % m_maxFramesInFlight;
 
 }

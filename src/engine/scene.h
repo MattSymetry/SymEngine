@@ -5,6 +5,7 @@
 #include "SceneGraphNode.h"
 
 struct SceneDescription {
+    alignas(16) glm::ivec2 mousePos;
     alignas(16) glm::vec3 camera_position;
     alignas(16) glm::vec3 camera_target;
     alignas(16) glm::vec4 viewport;
@@ -15,6 +16,8 @@ struct SceneDescription {
     alignas(16) glm::vec4 sunPos;
     alignas(4) float outlineTickness;
     alignas(16) glm::vec4 outlineCol;
+    alignas(4) int showGrid;
+    alignas(4) int AA;
 };
 
 class Scene {
@@ -58,10 +61,18 @@ public:
     void setOutlineThickness(float thickness) { m_outlineThickness = thickness; description.outlineTickness = thickness; }
     glm::vec4 getOutlineColor() { return m_outlineColor; }
     void setOutlineColor(glm::vec4 color) { m_outlineColor = color; description.outlineCol = color; }
+    void insertNodeAfter(SceneGraphNode* node, SceneGraphNode* moveBehindNode);
+    void showGrid(int show) { m_showGrid = show; description.showGrid = show; }
+    int getShowGrid() { return m_showGrid; }
+    void setAA(int aa) { m_AA = aa; description.AA = aa; }
+    int getAA() { return m_AA; }
+    void MousePos(int x, int y);
+    int hoverId = -1;
+    void ClickedInViewPort();
 private:
-    glm::vec4 m_backgroundColor = glm::vec4(0.4f, 0.5f, 0.9f, 1.0f);
+    glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
     glm::vec4 m_sunPosition = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    float m_outlineThickness = 0.01f;
+    float m_outlineThickness = 0.0f;
     glm::vec4 m_outlineColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     bool m_shiftPressed = false;
     int m_tmpNodeIndex = 0;
@@ -71,6 +82,8 @@ private:
     int m_selectedObjectId = 0;
     int m_idCounter = 0;
     int m_sceneSize = 0;
+    int m_showGrid = 1;
+    int m_AA = 1;
     static const int m_maxObjects = 50;
     std::array<NodeData, m_maxObjects> m_nodeData;
     void SerializeNode(SceneGraphNode* node);

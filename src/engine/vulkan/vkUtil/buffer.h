@@ -16,6 +16,8 @@ public:
 
 	void destroy(vk::Device logicalDevice);
 
+	void* getWriteLocation() { return writeLocation; }
+
 private:
 	void* writeLocation;
 };

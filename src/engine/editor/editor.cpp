@@ -116,6 +116,10 @@ void Editor::getScene(Scene* scene)
     {
         SceneGraphNode* sceneGraph = scene->GetSceneGraph();
         DrawSceneGraphNode(sceneGraph, true, false, scene);
+        if (ImGui::IsMouseReleased(0))
+        {
+            m_isMovingElement = false;  
+        }
 
         bool createGroup = false;
         bool createObject = false;
@@ -263,11 +267,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                 } 
                 ImGui::EndDragDropTarget();
             }
-
-            if (ImGui::IsMouseReleased(0))
-			{
-				m_isMovingElement = false;
-			}
+            
             if (m_isMovingElement && selectedId != id && !isGroup)
             {
                 ImVec4 buttonColor = ImVec4(0.5f, 0.5f, 0.5f, 0.4f);
@@ -275,11 +275,14 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
 
                 ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
-                ImGui::Button("###after", ImVec2(ImGui::GetContentRegionAvail().x, 5.0f));
+                ImGui::Button("###after"+id, ImVec2(ImGui::GetContentRegionAvail().x, 5.0f));
                 if (ImGui::BeginDragDropTarget()) {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_NAME")) {
+                    ImGuiDragDropFlags targetFlags = 0;
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_NAME", targetFlags)) 
+                    {
                         SceneGraphNode* draggedNode = *(SceneGraphNode**)payload->Data;
-                        scene->updateNodeData();
+                        SceneGraphNode* moveTo = node;
+                        scene->insertNodeAfter(draggedNode, moveTo);
                     }
                     ImGui::EndDragDropTarget();
                 }
@@ -341,6 +344,16 @@ void Editor::getInspector(Scene* scene)
             ImGui::Spacing(); 
             ImGui::Separator();
             ImGui::Spacing();
+
+            if (node->getId() == 0)
+            {
+                float buttonWidth = avail * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
+                if (ImGui::Button("Add Group", ImVec2(buttonWidth, 0))) { scene->AddEmpty(node, false); }
+                ImGui::SameLine();
+                if (ImGui::Button("Add Object", ImVec2(buttonWidth, 0))) { scene->AddEmpty(node, true); }
+                ImGui::End();
+                return;
+            }
              
             // Transform
             char* TransformModeNames[] = { "Local Transform", "Global Transform"};
@@ -361,7 +374,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Text("Rotation");
                 ImGui::PopFont();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
+                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.1f, 0.0f, 0.0f, "%.3f")) {
                     transform->setRotation(rotation);
                 }
 			}
@@ -380,7 +393,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Text("Rotation");
                 ImGui::PopFont();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
+                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.1f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldRotation(rotation);
                 }
 			}
@@ -413,23 +426,34 @@ void Editor::getInspector(Scene* scene)
                 node->changeBoolOperation(operation);
             }
 
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
+            float goop = node->getGoop();
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text("Smoothing");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 1.0f, "%.3f")) {
+                node->setGoop(goop); 
+            }
 
             if (!node->isGroup())
             {
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text("Color");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 glm::vec4 color = node->getColor();
-                if (ImGui::ColorEdit3("Color", &color[0])) {
+                if (ImGui::ColorEdit3("##Color", &color[0])) {
                     node->setColor(color);
                 }
-            }
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
+        
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
 
-            if (!node->isGroup())
-            {
                 Shape* shape = node->getObject()->getComponent<Shape>();
                 int currentShapeId = 0;
                 bool idFound = false;
@@ -458,8 +482,9 @@ void Editor::getInspector(Scene* scene)
                 {
                 case Type::Sphere: {
 					Sphere sphere = shape->shape.sphere;
-					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
-                    ImGui::Text("Radius"); ImGui::SameLine();
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Radius");
+                    ImGui::PopFont();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                     if (ImGui::DragFloat("##Radius", &sphere.radius, 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (sphere.radius < 0.01f) { sphere.radius = 0.01f; }
@@ -469,15 +494,17 @@ void Editor::getInspector(Scene* scene)
 					break;
                 case Type::Box: {
                     Box box = shape->shape.box;
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
-                    ImGui::Text("Size"); ImGui::SameLine();
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Size");
+                    ImGui::PopFont();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                     if (ImGui::DragFloat3("##Size", &box.size[0], 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (box.size.x < 0.01f) { box.size.x = 0.01f; }
 						shape->shape.box = box;
 					}
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
-                    ImGui::Text("Rounding"); ImGui::SameLine();
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Rounding");
+                    ImGui::PopFont();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                     if (ImGui::DragFloat("##Rounding", &box.cornerRadius, 0.01f, 0.0f, 100.0f, "%.3f")) {
                         if (box.cornerRadius < 0.0f) { box.cornerRadius = 0.0f; }
@@ -485,17 +512,19 @@ void Editor::getInspector(Scene* scene)
 					}
                     }
                     break;
-                case Type::Cone: {
+                case Type::Cone: {  
                     Cone cone = shape->shape.cone;
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
-                    ImGui::Text("Height"); ImGui::SameLine();
-					ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Height");
+                    ImGui::PopFont();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                     if (ImGui::DragFloat("##Height", &cone.height, 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (cone.height < 0.01f) { cone.height = 0.01f; }
 						shape->shape.cone = cone;
 					}
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.25);
-                    ImGui::Text("Angle"); ImGui::SameLine();
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Angle");
+                    ImGui::PopFont();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                     if (ImGui::DragFloat("##Angle", &cone.angle, 0.1f, 1.0, 70.0, "%.3f")) {
                         if (cone.angle < 1.0f) { cone.angle = 1.0f; }
@@ -519,29 +548,68 @@ void Editor::getSettings(Scene* scene)
 {
 	if (scene != nullptr)
 	{
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Background Color");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         glm::vec4 color = scene->getBackgroundColor();
-        if (ImGui::ColorEdit3("Background Color", &color[0])) {
+        if (ImGui::ColorEdit3("##BackgroundColor", &color[0])) {
             scene->setBackgroundColor(color);
         }
 
         ImGui::Spacing();
 
-        glm::vec4 sunPos = scene->getSunPosition();
-        if (ImGui::DragFloat3("Sun Position", &sunPos[0], 0.01f, -1.0f, 1.0f, "%.3f")) {
-			scene->setSunPosition(sunPos);
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Grid");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int showGrid = scene->getShowGrid();
+        bool showGridBool = showGrid;
+        if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
+			scene->showGrid(int(showGridBool));
 		}
 
         ImGui::Spacing();
 
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Anti-Aliasing");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int AA = scene->getAA();
+        if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 16)) {
+            scene->setAA(AA);
+        }
+
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Light-Direction");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        glm::vec4 sunPos = scene->getSunPosition();
+        if (ImGui::DragFloat3("##SunPosition", &sunPos[0], 0.01f, -1.0f, 1.0f, "%.3f")) {
+			scene->setSunPosition(sunPos); 
+		}
+
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Outline Thickness");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         float outlineThickness = scene->getOutlineThickness();
-        if (ImGui::DragFloat("Outline Thickness", &outlineThickness, 0.01f, 0.0f, 1.0f, "%.3f")) {
+        if (ImGui::DragFloat("##OutlineThickness", &outlineThickness, 0.01f, 0.0f, 1.0f, "%.3f")) {
 			scene->setOutlineThickness(outlineThickness);
 		}
 
 		ImGui::Spacing();
 
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Outline Color");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         glm::vec4 outlineColor = scene->getOutlineColor();
-		if (ImGui::ColorEdit3("Outline Color", &outlineColor[0])) {
+		if (ImGui::ColorEdit3("##OutlineColor", &outlineColor[0])) {
 			scene->setOutlineColor(outlineColor);
 		}
 
@@ -633,7 +701,7 @@ void Editor::SettingsPanel(Scene* scene)
     ImGui::End();
 }
 
-void Editor::MenuBar()
+void Editor::MenuBar(Scene* scene)
 {
     if (ImGui::BeginMainMenuBar())
     {
@@ -643,14 +711,32 @@ void Editor::MenuBar()
             // Menu items
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Add"))
+        if (ImGui::BeginMenu("Save"))
         {
             // Menu items
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Save"))
+        if (ImGui::BeginMenu("Add"))
         {
             // Menu items
+            if (ImGui::Selectable("Add Group"))
+            {
+                ImGui::CloseCurrentPopup();
+                scene->AddEmpty(scene->GetSceneGraph(), false);
+            }
+            if (ImGui::BeginMenu("Add Object"))
+            {
+                // List of all object types you can add
+                for (const auto& object : NameToTypeMap)
+                {
+                    if (ImGui::Selectable(object.first.c_str()))
+                    {
+                        ImGui::CloseCurrentPopup();
+                        scene->AddEmpty(scene->GetSceneGraph(), true, NameToTypeMap.find(object.first)->second);
+                    }
+                }
+                ImGui::EndMenu();
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -672,13 +758,24 @@ void Editor::Gizmo(Scene* scene)
     if (scene->GetSelectedId() != 0) { 
         glm::mat4 trans = scene->GetSelectedNode()->getTransform()->getWorldTransform();
         glm::vec3 position = trans[2];
-        //position *= 0.01f;
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
         glm::mat4 viewMatrix = scene->m_camera.getViewMatrix();
         glm::mat4 projMatrix = scene->m_camera.getProjectionMatrix();
+        float tmpPos[16];
+        float translation[3], rotation[3], scale[3];
+        ImGuizmo::RecomposeMatrixFromComponents(&position.x, &trans[1].x, &trans[0].x, tmpPos);
         ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
-            ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, glm::value_ptr(transform));
-        scene->GetSelectedNode()->getTransform()->setWorldPosition(glm::vec3(transform[3]));
+            ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, tmpPos);
+        ImGuizmo::DecomposeMatrixToComponents(tmpPos, translation, rotation, scale);
+        scene->GetSelectedNode()->getTransform()->setWorldPosition(glm::vec3(translation[0], translation[1], translation[2]));
+        
+        float tmp[16];
+        glm::vec3 rot = glm::vec3(0.0f);
+        ImGuizmo::RecomposeMatrixFromComponents(&position.x, &rot.x, &trans[0].x, tmp);
+        ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
+            ImGuizmo::OPERATION::ROTATE, ImGuizmo::MODE::WORLD, tmp);
+        ImGuizmo::DecomposeMatrixToComponents(tmp, translation, rotation, scale);
+        scene->GetSelectedNode()->getTransform()->rotate(glm::vec3(rotation[0], rotation[1], rotation[2]));
     }
     ImGui::End();
 }

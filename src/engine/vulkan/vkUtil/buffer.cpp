@@ -9,18 +9,18 @@ Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size
 	//Make Staging Buffer
 	vkUtil::BufferInputChunk input;
 	input.logicalDevice = logicalDevice;
-	input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+	input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
 	input.physicalDevice = physicalDevice;
 	input.size = size;
-	input.usage = vk::BufferUsageFlagBits::eTransferSrc;
+	input.usage = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
 	vkUtil::BufferOutputChunk  chunk = vkUtil::createBuffer(input);
     stagingBuffer = chunk.buffer;
     stagingMemory = chunk.memory;
     stagingSize = chunk.size;
 
 	//Make Device Buffer
-	input.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
-	input.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
+	input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+	input.usage = usage | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
 	chunk = vkUtil::createBuffer(input);
     buffer = chunk.buffer;
     deviceMemory = chunk.memory;

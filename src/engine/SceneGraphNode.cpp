@@ -10,6 +10,7 @@ SceneGraphNode::SceneGraphNode(int id, bool hasObject, SceneGraphNode* parent, s
 		this->getTransform()->updateWorldSpace(parent->getTransform()->getTransform());
 	}
 	m_color = glm::vec4(1.0f);
+	m_goop = 0.1f;
 }
 
 void SceneGraphNode::addChild(SceneGraphNode* child) {
@@ -23,7 +24,7 @@ void SceneGraphNode::removeChild(SceneGraphNode* child) {
 	}
 }
 
-void SceneGraphNode::setParent(SceneGraphNode* parent) {
+void SceneGraphNode::setParent(SceneGraphNode* parent, bool addToParent) {
 	if (m_parent) {
 		m_parent->removeChild(this);
 	}
@@ -32,7 +33,7 @@ void SceneGraphNode::setParent(SceneGraphNode* parent) {
 	}
 	m_parent = parent;
 	this->getTransform()->updateWorldSpace(parent->getTransform()->getTransform());
-	m_parent->addChild(this);
+	if (addToParent) m_parent->addChild(this);
 }
 
 void SceneGraphNode::addObject(std::unique_ptr<GameObject> object) {
@@ -65,11 +66,26 @@ void SceneGraphNode::changeBoolOperation(BoolOperatios operation) {
 	m_data.data0.z = operation;
 }
 
+void SceneGraphNode::addChildAfter(SceneGraphNode* child, SceneGraphNode* moveBehindNode) {
+	child->getParent()->removeChild(child);
+	child->setParent(this, false);
+
+	auto it = std::find(m_children.begin(), m_children.end(), moveBehindNode);
+	if (it != m_children.end()) {
+		++it;
+		m_children.insert(it, child);
+	}
+	else {
+		m_children.push_back(child);
+	}
+}
+
 NodeData* SceneGraphNode::getData() {
 	m_data.data0.x = m_dataId;
 	m_data.data0.y = (m_parent != nullptr) ? m_parent->getDataId() : -1; // TODO
 	m_data.data0.z = m_parent ? m_parent->getBoolOperation() : -1;
 	m_data.data0.w = m_id;
+	m_data.data1.x = m_goop;
 	m_data.color = m_color;
 	m_data.transform = m_transform.getWorldTransform();
 	if (m_hasObject) {

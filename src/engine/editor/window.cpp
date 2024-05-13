@@ -59,6 +59,7 @@ void Window::run() {
        glm::vec4 viewportBounds = glm::vec4(viewp.x, viewp.x + viewp.z, 0.0f, viewp.w);
        int mouseX, mouseY;
        Uint32 mouseButtons = SDL_GetMouseState(&mouseX, &mouseY);
+       _scene->MousePos(mouseX, mouseY);
        bool mouseInViewport = (mouseX > viewportBounds.x && mouseX < viewportBounds.y && mouseY > viewportBounds.z && mouseY < viewportBounds.w);
        if (SDL_GetRelativeMouseMode()) {
            if (mouseInViewport) {
@@ -128,11 +129,16 @@ void Window::run() {
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
         snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", ImGui::GetIO().Framerate);
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        if (!io.WantCaptureMouse && SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT))
+        {
+            _scene->ClickedInViewPort();
+        }
 
         _editor->Docker();
         _editor->Gizmo(_scene);
         _editor->SettingsPanel(_scene);
-        _editor->MenuBar();
+        _editor->MenuBar(_scene);
         if (_scene->m_viewport != viewp) 
         {
 			_scene->UpdateViewport(viewp);

@@ -6,7 +6,7 @@ float time = float(unscaledTime.myInt) / 40.0;
 
 struct NodeData {
     ivec4 data0;//childCount, childStart, operation, sceneID
-    //ivec4 data1;// operator, group, padding[2]
+    vec4 data1;// operatorGoop, padding[3]
     mat4 transform;
     mat4 obejctData;
     vec4 color;
@@ -15,7 +15,9 @@ struct NodeData {
 layout(std140, binding = 3) buffer ObjectBuffer {
     NodeData nodes[];
 } SceneNodes;
-
+layout(set = 0, binding = 4) buffer selectedIdUniform {
+    int selectedId;
+};
 struct Camera {
     vec3 position;
     vec3 forwards;
@@ -24,6 +26,7 @@ struct Camera {
 };
 
 layout(set = 0, binding = 1) uniform UBO {
+    ivec2 mousePos;
     vec3 camera_position;
     vec3 camera_target;
     vec4 viewport;
@@ -34,6 +37,8 @@ layout(set = 0, binding = 1) uniform UBO {
     vec4 sunPos;
     float outlineTickness;
     vec4 outlineCol;
+    int showGrid;
+    int AA;
 } SceneData;
 
 float dot2( in vec2 v ) { return dot(v,v); }

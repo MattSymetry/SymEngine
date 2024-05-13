@@ -73,9 +73,11 @@ public:
         m_worldTransform[1][1] += m_transform.rotation.y;
         m_worldTransform[1][2] += m_transform.rotation.z;
         // Set translation
-        m_worldTransform[2][0] += m_transform.position.x;
-        m_worldTransform[2][1] += m_transform.position.y;
-        m_worldTransform[2][2] += m_transform.position.z;
+        glm::vec3 rotChildPos = rotateChild(m_worldTransform[2], m_worldTransform[1], m_transform.position);
+        //std::cout << "Rotated child position: " << rotChildPos.x << " " << rotChildPos.y << " " << rotChildPos.z << std::endl;
+        m_worldTransform[2][0] += rotChildPos.x;
+        m_worldTransform[2][1] += rotChildPos.y;
+        m_worldTransform[2][2] += rotChildPos.z;
     }
 
     const glm::vec3 getPosition() const {
@@ -107,4 +109,24 @@ public:
         updateWorldSpace(m_parentTransform);
 		return m_parentTransform;
 	}
+
+    glm::vec3 rotateChild(const glm::vec3 parentPos, const glm::vec3 parentRot, const glm::vec3 childLocalPos) {
+        // Convert rotation angles from degrees to radians
+        glm::vec3 radianRot = glm::radians(parentRot);
+
+        // Create transformation matrices
+        glm::mat4 translateToOrigin = glm::translate(glm::mat4(1.0f), -parentPos);
+        glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), radianRot.x, glm::vec3(1, 0, 0))
+            * glm::rotate(glm::mat4(1.0f), radianRot.y, glm::vec3(0, 1, 0))
+            * glm::rotate(glm::mat4(1.0f), radianRot.z, glm::vec3(0, 0, 1));
+        glm::mat4 translateBack = glm::translate(glm::mat4(1.0f), parentPos);
+
+        // Combine the transformations
+        glm::mat4 parentTransform = translateBack * rotation * translateToOrigin;
+
+        // Apply the transformation to the child's local position
+        glm::vec4 childWorldPos = parentTransform * glm::vec4(childLocalPos, 1.0f);
+
+        return glm::vec3(childWorldPos);
+    }
 };

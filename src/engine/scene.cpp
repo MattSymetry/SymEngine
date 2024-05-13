@@ -1,14 +1,16 @@
 #include "scene.h"
 #include <algorithm>
 #include <functional>
+#include <queue>
 
 Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
 {
     m_sceneSize = 1; 
     m_sceneGraphNodes.push_back(&m_sceneGraph);
     float aspect = viewport.z / viewport.w;
-    m_camera = Camera(glm::vec3(0.0f, 2.0f, -2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
+    m_camera = Camera(glm::vec3(0.0f, 2.0f, 2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
     description = {}; 
+    description.mousePos = glm::ivec2(400, 400);
     description.camera_position = m_camera.getPosition();
     description.camera_target = m_camera.getTarget();
     description.viewport = viewport; 
@@ -16,9 +18,11 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     description.camera_fov = m_camera.getFov();
     description.sceneSize = m_sceneSize;
     description.backgroundColor = m_backgroundColor;
-    description.sunPos = m_sunPosition;
+    description.sunPos = m_sunPosition; 
     description.outlineTickness = m_outlineThickness;
     description.outlineCol = m_outlineColor;
+    description.showGrid = m_showGrid;
+    description.AA = m_AA;
 
     m_viewport = viewport; 
     AddBuffer(sizeof(description), vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &description);
@@ -26,6 +30,8 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     SetupObjects();
     updateNodeData();
     AddBuffer(sizeof(NodeData) * m_maxObjects, vk::BufferUsageFlagBits::eStorageBuffer, vk::DescriptorType::eStorageBuffer, m_nodeData.data());
+    // add buffer int with selected ID
+    AddBuffer(4, vk::BufferUsageFlagBits::eStorageBuffer, vk::DescriptorType::eStorageBuffer, &m_selectedObjectId);
 }
 
 void Scene::AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void *dataPtr) {
@@ -60,7 +66,20 @@ void Scene::MouseInput(int x, int y) {
     else {
         m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
     }
-    description.camera_position = m_camera.getPosition();
+    description.camera_position = m_camera.getPosition(); 
+}
+
+void Scene::MousePos(int x, int y) {
+	description.mousePos = glm::ivec2(x, y);
+}
+
+void Scene::ClickedInViewPort() {
+    if (hoverId != -1) {
+		m_selectedObjectId = hoverId;
+	}
+    else {
+        m_selectedObjectId = 0;
+    }
 }
  
 void Scene::MouseScroll(int y) {
@@ -76,21 +95,19 @@ void Scene::Update(int deltaTime) {
     for (int i = 0; i < m_sceneSize; i++) {
         NodeData* data = &m_nodeData[i];
         SceneGraphNode* node = GetSceneGraphNode(data->data0.w);
-        if (node) {
+        if (node) { 
             //node->setDataId(i);
             //data->data0.x = i;
             //data->data0.y = node->getParent() ? node->getParent()->getDataId() : -1;
             //data->data0.z = i + 1;
             //data->data0.w = node->getChildren().size();
-            data->transform = node->getTransform()->getWorldTransform();
+            data->transform = node->getTransform()->getWorldTransform(); 
            
             if (!node->isGroup()) {
                 data->object = node->getObject()->getData();
             }
-            else
-            {
-            }
-            data->data0.z = node->getBoolOperation(); 
+            data->data0.z = node->getBoolOperation();
+            data->data1.x = node->getGoop(); 
             data->color = node->getColor();
             //std::cout << "Node " << i << " " << node->getName() << std::endl;
 		}
@@ -111,38 +128,64 @@ void Scene::updateNodeData() {
 	description.sceneSize = m_sceneSize;
 }
 
+void Scene::insertNodeAfter(SceneGraphNode* node, SceneGraphNode* moveBehindNode) {
+    if (node == nullptr || moveBehindNode == nullptr) {
+		return;
+	}
+	SceneGraphNode* newParent = moveBehindNode->getParent();
+    if (newParent == nullptr) {
+		return;
+	}
+    newParent->addChildAfter(node, moveBehindNode);
+	updateNodeData();
+}
+
 void Scene::SerializeNode(SceneGraphNode* root) {
     if (root == nullptr) {
         return; 
     }
-    if (!root->isGroup() || root->isLeaf()) {
-		//return; 
-	}
     std::unordered_map<SceneGraphNode*, int> nodeToIndexMapping;
     std::function<void(SceneGraphNode*)> PostOrderSerialize = [&](SceneGraphNode* node) {
         if (node == nullptr) return;
 
-        for (SceneGraphNode* child : node->getChildren()) {
-            PostOrderSerialize(child);
-        } 
+        std::map<int, std::vector<SceneGraphNode*>> levelNodes;
+        std::queue<std::pair<SceneGraphNode*, int>> queue;
+        queue.push({ root, 0 });
 
-        NodeData serializedNode;
-        serializedNode.data0.z = (node == root) ? -1 : node->getBoolOperation();
-        serializedNode.data0.y = m_tmpNodeIndex - node->getChildren().size();
-        serializedNode.data0.x = (node->isGroup()) ? node->getChildren().size() : -1;
-        serializedNode.data0.w = node->getId();
+        // Normal level order but storing nodes by depth
+        while (!queue.empty()) {
+            auto [node, level] = queue.front();
+            queue.pop();
+            levelNodes[level].push_back(node);
 
-        if (!node->isGroup()) { 
-            serializedNode.object = node->getObject()->getData();
+            for (auto child : node->getChildren()) {
+                queue.push({ child, level + 1 });
+            }
         }
-        serializedNode.transform = node->getTransform()->getWorldTransform();
 
-        // Add the current node to the serialized list
-        m_nodeData[m_tmpNodeIndex] = serializedNode;
+        // Iterate from the deepest level to the root level
+        for (auto it = levelNodes.rbegin(); it != levelNodes.rend(); ++it) {
+            for (auto node : it->second) {
+                NodeData serializedNode;
+                serializedNode.data0.z = (node == root) ? -1 : node->getBoolOperation();
+                serializedNode.data0.y = m_tmpNodeIndex - node->getChildren().size();
+                serializedNode.data0.x = (node->isGroup()) ? node->getChildren().size() : -1;
+                serializedNode.data0.w = node->getId();
 
-        // Map the original tree node to its index in the serialized array
-        nodeToIndexMapping[node] = m_tmpNodeIndex;
-        m_tmpNodeIndex++;
+                if (!node->isGroup()) {
+                    serializedNode.object = node->getObject()->getData();
+                }
+                serializedNode.transform = node->getTransform()->getWorldTransform();
+
+                // Add the current node to the serialized list
+                m_nodeData[m_tmpNodeIndex] = serializedNode;
+
+                // Map the original tree node to its index in the serialized array
+                nodeToIndexMapping[node] = m_tmpNodeIndex;
+                m_tmpNodeIndex++;
+            }
+        }
+        
     };
      
     PostOrderSerialize(root);

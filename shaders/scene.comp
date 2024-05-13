@@ -1,60 +1,66 @@
+#define RX(X) mat3(1., 0., 0. ,0., cos(X), -sin(X) ,0., sin(X), cos(X))	//x axis rotation matrix
+#define RY(X) mat3(cos(X), 0., sin(X),0., 1., 0.,-sin(X), 0., cos(X))	//y axis rotation matrix	
+#define RZ(X) mat3(cos(X), -sin(X), 0.	,sin(X), cos(X), 0.	,0., 0., 1.)	//z axis rotation matrix
+#define Rotate(X,Y,Z) RZ(Z)*RY(Y)*RX(X)	//x,y,z combined rotation
+
 vec4 calcObj (vec3 pos, NodeData node)
 {
     vec3 objPos = node.transform[2].xyz;
     vec3 objRot = node.transform[1].xyz;
     vec4 obj;
 
+    pos = (Rotate(radians(objRot.x), radians(objRot.y), radians(objRot.z)) * (pos- objPos));
+
     if (node.obejctData[3].w == 0) { // Sphere
-        obj = vec4( sdSphere(pos-objPos, node.obejctData[0].x), node.color.xyz );
+        obj = vec4( sdSphere(pos, node.obejctData[0].x), node.color.xyz );
     }
     else if (node.obejctData[3].w == 1) { // Box
-        obj = vec4( sdRoundBox(pos-objPos, node.obejctData[0].xyz, node.obejctData[0].w), node.color.xyz );
+        obj = vec4( sdRoundBox(pos, node.obejctData[0].xyz, node.obejctData[0].w), node.color.xyz );
     }
     else if (node.obejctData[3].w == 2) { // Cone
         node.obejctData[0].y = radians(90.0-node.obejctData[0].y);
         objPos.y += node.obejctData[0].x;
-        obj = vec4( sdCone(pos-objPos, vec2(sin(node.obejctData[0].y), cos(node.obejctData[0].y)), node.obejctData[0].x), node.color.xyz );
+        obj = vec4( sdCone(pos, vec2(sin(node.obejctData[0].y), cos(node.obejctData[0].y)), node.obejctData[0].x), node.color.xyz );
     }
-
     return obj;
 }
 
-vec4 applyOperation(int operation, vec4 a, vec4 b) {
-    if (operation == 0) {
-        a = opU(a, b, 0.1);
-    } else if (operation == 1) {
-        a = opI(a, b, 0.1);
-    } else if (operation == 2) {
-        a = opS(a, b, 0.1);
+vec4 applyOperation(int operation, float goop, vec4 a, vec4 b) {
+    switch (operation) {
+        case 0: // Union
+            return opU(a, b, goop);
+        case 1: // Intersection
+            return opI(a, b, goop);
+        case 2: // Subtraction
+            return opS(a, b, goop);
     }
-    return a;
 }
 
 #define MAX_STACK_SIZE 50
 
-vec4 calcGroup(vec3 pos, int nodeId) {
+vec4 calcGroup(vec3 pos, int nodeId, bool checkM) {
     vec4 results[MAX_STACK_SIZE];
+    results[0] = vec4(1.0, 0.0, 0.0, 0.0);
     for (int i = 0; i < SceneData.sceneSize; ++i) {
         NodeData node = SceneNodes.nodes[i];
         if (node.data0.x > 0) { // not empty group
             vec4 result = results[node.data0.y];
             for (int j = 1; j < node.data0.x; ++j) {
                 int childIndex = node.data0.y + j;
-                result = applyOperation(SceneNodes.nodes[childIndex].data0.z, result, results[childIndex]);
+                result = applyOperation(SceneNodes.nodes[childIndex].data0.z, SceneNodes.nodes[childIndex].data1.x, result, results[childIndex]);
             }
             results[i] = result;
-        } else { // object
+        } else if (node.data0.x == -1) { // object
             results[i] = calcObj(pos, node);
+            if ( results[i].x < 0.01) {
+                selectedId = node.data0.w;
+            }
         }
     }
     return results[SceneData.sceneSize - 1];
 }
 
-vec4 map(in vec3 pos) {
-    vec4 res = vec4(1.0,0.0,0.0,0.0);
+vec4 map(in vec3 pos, bool checkM) {
     NodeData node = SceneNodes.nodes[0];
-
-    res = calcGroup(pos, 0);
-
-    return res;
+    return calcGroup(pos, 0, checkM);
 }

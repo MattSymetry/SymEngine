@@ -12,7 +12,7 @@ public:
 	~Editor();
 	void Docker();
 	void SettingsPanel(Scene* scene);
-	void MenuBar();
+	void MenuBar(Scene* scene);
 	glm::vec4 GetViewport();
 	void setTheme();
 	void Gizmo(Scene* scene);

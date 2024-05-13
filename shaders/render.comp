@@ -1,4 +1,4 @@
-vec4 raycast( in vec3 ro, in vec3 rd)
+vec4 raycast( in vec3 ro, in vec3 rd, bool checkM)
 {
     vec4 res = vec4(-1.0);
 
@@ -16,14 +16,14 @@ vec4 raycast( in vec3 ro, in vec3 rd)
 
         for( int i=0; i<256 && t<tmax; i++ )
         {
-            vec4 h = map( ro+rd*t);
+            vec4 h = map( ro+rd*t, checkM);
             edgeLength = min(abs(h.x), edgeLength);
             if( abs(h.x)<(0.0005*t) )
             { 
                 res = vec4(t,h.yzw); 
                 break;
             }
-            if (abs(h.x)/4.0 > edgeLength && edgeLength <= SceneData.outlineTickness ) 
+            if (SceneData.outlineTickness > 0.0 && abs(h.x)/4.0 > edgeLength && edgeLength <= SceneData.outlineTickness ) 
             {
                 res = vec4(-20.0,0.0,0.0,0.0);
                 break;
@@ -44,7 +44,7 @@ float calcSoftshadow( in vec3 ro, in vec3 rd)
     float t = 0.02;
     for( int i=0; i<12; i++ )
     {
-		float h = map( ro + rd*t).x;
+		float h = map( ro + rd*t, false).x;
         res = min( res, mix(1.0,16.0*h/t, 1.0) );
         t += clamp( h, 0.05, 0.40 );
         if( res<0.005 || t>tmax ) break;
@@ -58,7 +58,7 @@ vec3 calcNormal( in vec3 pos )
     for( int i=ZERO; i<4; i++ )
     {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
-        n += e*map(pos+0.0005*e).x;
+        n += e*map(pos+0.0005*e, false).x;
     }
     return normalize(n);
  
@@ -71,11 +71,46 @@ float calcAO( in vec3 pos, in vec3 nor )
     for( int i=ZERO; i<5; i++ )
     {
         float h = 0.01 + 0.12*float(i)/4.0;
-        float d = map( pos + h*nor ).x;
+        float d = map( pos + h*nor, false).x;
         occ += (h-d)*sca;
         sca *= 0.95;
     }
     return clamp( 1.0 - 2.0*occ, 0.0, 1.0 );
+}
+
+vec4 castXZPlane(vec3 rayOrigin, vec3 rayDirection)
+{
+    float mul = 1.0;
+    if (rayOrigin.y < 0.0) mul = -1.0;
+    
+    vec3 castRayOrigin = rayOrigin;
+ 	float distToPlane = abs(castRayOrigin.y);
+    vec3 castRayDirection = rayDirection / rayDirection.y;
+    castRayDirection *= distToPlane;
+    
+    castRayOrigin -= mul * castRayDirection;
+    
+    return vec4((castRayOrigin).xz, (dot(rayDirection * mul, castRayDirection) < 0.0 ? 1.0 : 0.0), length(castRayDirection));
+}
+
+float planeToLines(vec4 plane)
+{
+ 	vec2 uv = fract(plane.xy + 0.5);
+    float width = 0.006 * (plane.w);
+    float fade = smoothstep(100.0, -20.0, plane.w);
+	return min((smoothstep(width, 0.0, abs(uv.x - 0.5)) + smoothstep(width, 0.0, abs(uv.y - 0.5))) * plane.z, 1.0) * fade;
+}
+
+vec4 getGrid(vec3 rayOrigin, vec3 rayDirection)
+{
+    vec4 xzPlane = castXZPlane(rayOrigin.zyx, rayDirection.zyx);
+    float xzLines = planeToLines(xzPlane);
+
+    vec4 grid = vec4(0.0);
+    
+    grid += xzLines;
+    
+    return grid;
 }
 
 //______________________________________________________________________________
@@ -87,10 +122,10 @@ vec3 render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
     vec3 col = vec3(0.5, 0.5, 0.7) - max(rd.y,0.0)*0.3;
     col = SceneData.backgroundColor.xyz;
     // raycast scene
-    vec4 res = raycast(ro,rd);
+    vec4 res = raycast(ro,rd, false);
     float t = res.x;
 	float m = res.y;
-    if( t > 0.0 )
+    if( t > -0.5 )
     {
         vec3 pos = ro + t*rd;
         vec3 nor = calcNormal( pos );
@@ -135,6 +170,11 @@ vec3 render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
     {
         col = SceneData.outlineCol.xyz; // Edge
     }
+    else {
+        // Grid
+        vec4 grid = (getGrid(ro, rd) * 0.3) * SceneData.showGrid;
+        col = mix(col, grid.xyz, grid.w);
+    }
 
 	return vec3( clamp(col,0.0,1.0) );
 }
@@ -150,36 +190,55 @@ mat3 setCamera( in vec3 ro, in vec3 ta, float cr )
 
 void main()
 {
+    int AA = SceneData.AA;
+    vec4 tot = vec4(0.0);
 
-    // camera	
+    for( int m=0; m<AA; m++ ) {
+        for( int n=0; n<AA; n++ )
+        {
+            // camera
+            vec2 o = vec2(float(m),float(n)) / float(AA) - 0.5;
+            //vec2 o = vec2(1.3);
+            vec3 ta = SceneData.camera_target;
+            vec3 ro = SceneData.camera_position;
+            mat3 ca = setCamera( ro, ta, SceneData.camera_roll );
+            vec2 p = (2.0*(screen_pos+o)-screen_size.xy)/screen_size.y;
+
+            float fovRadians = radians(SceneData.camera_fov);
+            float tanHalfFov = tan(fovRadians / 2.0);
+
+            vec3 rd = ca * normalize(vec3(p * tanHalfFov, 1.0));
+
+            // ray differentials
+            vec2 px = (2.0*(screen_pos+vec2(1.0,0.0))-screen_size.xy)/screen_size.y;
+            vec2 py = (2.0*(screen_pos+vec2(0.0,1.0))-screen_size.xy)/screen_size.y;
+            vec3 rdx = ca * normalize( vec3(px* tanHalfFov, 1.0) );
+            vec3 rdy = ca * normalize( vec3(py* tanHalfFov, 1.0) );
+
+            // render	
+            vec3 col = render( ro, rd, rdx, rdy );
+
+            // gain
+            // col = col*3.0/(2.5+col);
+
+            // gamma
+            col = pow( col, vec3(0.4545) );
+
+            tot += vec4(col,1.0);
+        }
+    }
+    tot /= float(AA*AA);
+    //selectedId = -1;
+    ivec2 mP = SceneData.mousePos;
+    mP.y = screen_size.y - mP.y;
     vec3 ta = SceneData.camera_target;
     vec3 ro = SceneData.camera_position;
     mat3 ca = setCamera( ro, ta, SceneData.camera_roll );
-    vec3 tot = vec3(0.0);
-    vec2 p = (2.0*screen_pos-screen_size.xy)/screen_size.y;
-
+    vec2 p = (2.0*(mP)-screen_size.xy)/screen_size.y;
     float fovRadians = radians(SceneData.camera_fov);
     float tanHalfFov = tan(fovRadians / 2.0);
-
     vec3 rd = ca * normalize(vec3(p * tanHalfFov, 1.0));
-
-     // ray differentials
-    vec2 px = (2.0*(screen_pos+vec2(1.0,0.0))-screen_size.xy)/screen_size.y;
-    vec2 py = (2.0*(screen_pos+vec2(0.0,1.0))-screen_size.xy)/screen_size.y;
-    vec3 rdx = ca * normalize( vec3(px* tanHalfFov, 1.0) );
-    vec3 rdy = ca * normalize( vec3(py* tanHalfFov, 1.0) );
-
-    // render	
-    vec3 col = render( ro, rd, rdx, rdy );
-
-    // gain
-    // col = col*3.0/(2.5+col);
-
-    // gamma
-    col = pow( col, vec3(0.4545) );
-
-    tot += col;
-
+    raycast(ro, rd, true);
     screen_pos = ivec2(screen_pos.x, screen_size.y - screen_pos.y);
-    imageStore(colorBuffer, screen_pos, vec4( tot, 1.0 ));
+    imageStore(colorBuffer, screen_pos, tot);
 }
