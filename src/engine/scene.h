@@ -38,6 +38,7 @@ public:
     void KeyPressed(SDL_Keycode key);
     void KeyboardInput(Uint8* state);
     void MouseInput(int x, int y);
+    void WheelPressed(int x, int y);
     void MouseScroll(int y);
     void UpdateViewport(glm::vec4 viewport);
 

@@ -374,7 +374,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Text("Rotation");
                 ImGui::PopFont();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.1f, 0.0f, 0.0f, "%.3f")) {
+                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
                     transform->setRotation(rotation);
                 }
 			}
@@ -393,7 +393,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Text("Rotation");
                 ImGui::PopFont();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.1f, 0.0f, 0.0f, "%.3f")) {
+                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldRotation(rotation);
                 }
 			}

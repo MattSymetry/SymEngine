@@ -228,8 +228,8 @@ void main()
         }
     }
     tot /= float(AA*AA);
-    //selectedId = -1;
-    ivec2 mP = SceneData.mousePos;
+    selectedId = -1;
+    /*ivec2 mP = SceneData.mousePos;
     mP.y = screen_size.y - mP.y;
     vec3 ta = SceneData.camera_target;
     vec3 ro = SceneData.camera_position;
@@ -239,6 +239,7 @@ void main()
     float tanHalfFov = tan(fovRadians / 2.0);
     vec3 rd = ca * normalize(vec3(p * tanHalfFov, 1.0));
     raycast(ro, rd, true);
+    */
     screen_pos = ivec2(screen_pos.x, screen_size.y - screen_pos.y);
     imageStore(colorBuffer, screen_pos, tot);
 }

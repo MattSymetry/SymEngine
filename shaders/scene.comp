@@ -52,9 +52,10 @@ vec4 calcGroup(vec3 pos, int nodeId, bool checkM) {
             results[i] = result;
         } else if (node.data0.x == -1) { // object
             results[i] = calcObj(pos, node);
-            if ( results[i].x < 0.01) {
-                selectedId = node.data0.w;
-            }
+            /*if ( results[i].x < 0.01) {
+                atomicCompSwap(selectedId, -1, node.data0.w);
+                //selectedId = node.data0.w;
+            }*/
         }
     }
     return results[SceneData.sceneSize - 1];

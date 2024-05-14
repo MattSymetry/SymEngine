@@ -47,6 +47,7 @@ float Camera::getRoll() {
 
 void Camera::LookAt(glm::vec3 target) {
 	m_target = target;
+	updateViewMatrix();
 }
 
 void Camera::Move(glm::vec3 dir, float deltaTime) {

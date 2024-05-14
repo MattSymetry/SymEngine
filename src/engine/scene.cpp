@@ -52,6 +52,10 @@ void Scene::KeyPressed(SDL_Keycode key) {
 			RemoveSceneGraphNode(node);
 		}
 	}
+    if (key == SDLK_f) {
+        m_camera.LookAt(GetSelectedNode()->getTransform()->getWorldTransform()[2]);
+        description.camera_target = m_camera.getTarget();
+    }
 }
  
 void Scene::KeyboardInput(Uint8* state) {
@@ -59,14 +63,13 @@ void Scene::KeyboardInput(Uint8* state) {
 }
  
 void Scene::MouseInput(int x, int y) {
-    if (false || m_shiftPressed) {
-		//m_camera.Move(glm::vec3(x, y, 0.0f), m_deltaTime / 1000.0);
-        //description.camera_target = m_camera.getTarget();
-    }
-    else {
-        m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
-    }
+    m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
     description.camera_position = m_camera.getPosition(); 
+}
+
+void Scene::WheelPressed(int x, int y) {
+	m_camera.Move(glm::vec3(0.0f, 0.0f, 1.0f), m_deltaTime / 1000.0);
+	description.camera_position = m_camera.getPosition(); 
 }
 
 void Scene::MousePos(int x, int y) {

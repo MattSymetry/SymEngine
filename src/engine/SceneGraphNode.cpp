@@ -7,7 +7,7 @@ SceneGraphNode::SceneGraphNode(int id, bool hasObject, SceneGraphNode* parent, s
 	m_hasObject = hasObject;
 	if (m_parent) {
 		m_parent->addChild(this);
-		this->getTransform()->updateWorldSpace(parent->getTransform()->getTransform());
+		this->getTransform()->updateWorldSpace();
 	}
 	m_color = glm::vec4(1.0f);
 	m_goop = 0.1f;
