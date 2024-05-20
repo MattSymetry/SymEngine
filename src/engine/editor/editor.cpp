@@ -1,6 +1,7 @@
 #pragma once
 #include "Editor.h"
 #include "glm/gtc/type_ptr.hpp"
+#include "tinyfiledialogs.h"
 
 Editor::Editor()
 {
@@ -11,6 +12,11 @@ Editor::Editor()
 
 Editor::~Editor()
 {
+}
+
+bool Editor::hasCorrectExtension(const std::string& filename, const std::string& extension) {
+    return filename.size() >= extension.size() &&
+        filename.compare(filename.size() - extension.size(), extension.size(), extension) == 0;
 }
 
 glm::vec4 Editor::GetViewport()
@@ -98,7 +104,7 @@ void Editor::Docker()
 
             auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
             auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.22f, nullptr, &dockspace_id);
-            auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.25f, nullptr, &dockspace_id);
+            auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.05f, nullptr, &dockspace_id);
 
             ImGui::DockBuilderDockWindow("Code", dock_id_down);
             ImGui::DockBuilderDockWindow("Scene", dock_id_left);
@@ -188,8 +194,9 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
 
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
             nodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
+            std::string suff = (id == 0 && scene->hasSceneChanged()) ? " *" : "";
             nodeOpen =
-                ImGui::TreeNodeEx((void*)(intptr_t)id, nodeFlags, "%s", node->getName().c_str());
+                ImGui::TreeNodeEx((void*)(intptr_t)id, nodeFlags, "%s", (node->getName()+suff).c_str());
             ImGui::PopItemWidth();
             if (ImGui::IsItemClicked()) {
                 scene->SetSelectedId(id);
@@ -741,10 +748,44 @@ void Editor::MenuBar(Scene* scene)
         // Populate your menu bar here
         if (ImGui::BeginMenu("File"))
         {
-            // Menu items
+            if (ImGui::Selectable("Open Scene"))
+            {
+                ImGui::CloseCurrentPopup();
+                const char* filterPatterns[] = { "*.sym" };
+                const char* loadFilePath = tinyfd_openFileDialog(
+                    "Open Scene",
+                    "",
+                    1,
+                    filterPatterns,
+                    NULL,
+                    0
+                );
+
+                if (loadFilePath) {
+                    std::string filename(loadFilePath);
+                    if (hasCorrectExtension(loadFilePath, ".sym")) {
+                        scene->loadScene(loadFilePath);
+                    }
+                    else {
+						tinyfd_messageBox("Error", "File is not a .sym file", "ok", "error", 1);
+					}
+                }
+            }
+            if (ImGui::Selectable("Save Scene"))
+            {
+                ImGui::CloseCurrentPopup();
+                saveScene(scene);
+
+            }
+            if (ImGui::Selectable("Save Scene As"))
+            {
+                ImGui::CloseCurrentPopup();
+                saveScene(scene, true);
+
+            }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Save"))
+        if (ImGui::BeginMenu("Render"))
         {
             // Menu items
             ImGui::EndMenu();
@@ -811,6 +852,30 @@ void Editor::Gizmo(Scene* scene)
         scene->GetSelectedNode()->getTransform()->rotate(glm::vec3(rotation[0], rotation[1], rotation[2]));
     }
     ImGui::End();
+}
+
+void Editor::saveScene(Scene* scene, bool saveAs) {
+    std::string filename = scene->getFilename();
+    if (saveAs || filename == "" || !hasCorrectExtension(filename, ".sym")) {
+        const char* filterPatterns[] = { "*.sym" };
+        const char* saveFilePath = tinyfd_saveFileDialog(
+            "Save Scene",
+            (scene->GetSceneGraph()->getName() + ".sym").c_str(),
+            1,
+            filterPatterns,
+            NULL
+        );
+        if (saveFilePath) {
+            filename = saveFilePath;
+        }
+    }
+
+    if (filename != "") {
+        if (filename.find(".sym") == std::string::npos) {
+            filename += ".sym";
+        }
+        scene->saveScene(filename);
+    }
 }
 
 

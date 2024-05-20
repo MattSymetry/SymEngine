@@ -3,6 +3,8 @@
 #include "camera.h"
 #include "vulkan/vkUtil/buffer.h"
 #include "SceneGraphNode.h"
+#include "cereal/types/vector.hpp"
+#include "cereal/types/string.hpp"
 
 struct SceneDescription {
     alignas(16) glm::ivec2 mousePos;
@@ -18,6 +20,23 @@ struct SceneDescription {
     alignas(16) glm::vec4 outlineCol;
     alignas(4) int showGrid;
     alignas(4) int AA;
+};
+
+struct SceneData {
+    std::vector<NodeData> nodeData;
+    std::vector<std::string> names;
+    int sceneSize;
+
+    bool operator==(const SceneData& other) const {
+        return sceneSize == other.sceneSize && 
+            nodeData == other.nodeData &&
+            names == other.names;
+    }
+
+    template <class Archive>
+    void serialize(Archive& archive) {
+		archive(nodeData, names, sceneSize);
+	}
 };
 
 class Scene {
@@ -42,7 +61,7 @@ public:
     void MouseScroll(int y);
     void UpdateViewport(glm::vec4 viewport);
 
-    void RemoveSceneGraphNode(SceneGraphNode* node);
+    void RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes = true);
     void AddEmpty(SceneGraphNode* parent = nullptr, bool isObject = false, Type shape = Type::Sphere);
     void AddSphere(glm::vec3 position, float radius, glm::vec3 color);
 
@@ -78,7 +97,13 @@ public:
     void CtrZ();
     float m_orbitSpeed = 1.0f;
     float m_cameraSpeed = 1.0f;
+    void saveScene(std::string filename);
+    void loadScene(std::string filename);
+    std::string getFilename() { return m_filename; }
+    void setFilename(std::string filename) { m_filename = filename; }
+    bool hasSceneChanged() { return !(m_sceneData == m_tmpSceneData); }
 private:
+    std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
     glm::vec4 m_sunPosition = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     float m_outlineThickness = 0.0f;
@@ -101,4 +126,9 @@ private:
     void SetupObjects();
     void UpdateObjectData();
     SceneGraphNode* AddSceneGraphNode(std::string name);
+    void RecreateScene();
+    SceneGraphNode* CreateNodeFromData(int id, SceneGraphNode* parent);
+    SceneData CreateSnapshot();
+    SceneData m_sceneData;
+    SceneData m_tmpSceneData;
 };

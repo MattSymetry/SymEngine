@@ -38,7 +38,7 @@ target_include_directories(SymEngine PUBLIC
     "${PROJECT_SOURCE_DIR}/src/common"
 )
 
-target_link_libraries(SymEngine vma glm imgui ImGuizmo glslang SPIRV OGLCompiler HLSL)
+target_link_libraries(SymEngine vma glm imgui ImGuizmo glslang SPIRV OGLCompiler HLSL cereal tinyfiledialogs)
 
 
 target_link_libraries(SymEngine Vulkan::Vulkan sdl2)

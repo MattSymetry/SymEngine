@@ -3,6 +3,18 @@
 #include "object.h"
 #include <vector>
 
+namespace glm {
+	template<class Archive> void serialize(Archive& archive, glm::vec4& v) {
+		archive(v.x, v.y, v.z, v.w);
+	}
+	template<class Archive> void serialize(Archive& archive, glm::ivec4& v) {
+		archive(v.x, v.y, v.z, v.w);
+	}
+	template<class Archive> void serialize(Archive& archive, glm::mat4& m) {
+		archive(m[0], m[1], m[2], m[3]);
+	}
+}
+
 enum BoolOperatios {
 	Union = 0,
 	Intersection = 1,
@@ -15,6 +27,19 @@ struct NodeData {
 	glm::mat4 transform; 
 	glm::mat4 object;
 	glm::vec4 color;
+
+	bool operator==(const NodeData& other) const {
+		return data0 == other.data0 &&
+			data1 == other.data1 &&
+			transform == other.transform &&
+			object == other.object &&
+			color == other.color;
+	}
+
+	template <class Archive>
+	void serialize(Archive& archive) {
+		archive(data0, data1, transform, object, color);
+	}
 };
 
 class SceneGraphNode {
@@ -106,4 +131,6 @@ public:
 	void addChildAfter(SceneGraphNode* child, SceneGraphNode* moveBehindNode);
 	void setGoop(float goop) { m_goop = goop; m_data.data1.x = goop; }
 	float getGoop() { return m_goop; }
+	void setData(const NodeData data);
+	void setId(int id) { m_id = id; m_data.data0.w = id; }
 };

@@ -97,3 +97,24 @@ NodeData* SceneGraphNode::getData() {
 	
 	return &m_data;
 }
+
+void SceneGraphNode::setData(const NodeData data) {
+	m_data = data;
+	m_boolOperation = static_cast<BoolOperatios>(data.data0.z);
+	m_goop = data.data1.x;
+	m_color = data.color;
+	m_hasObject = data.data0.x <= 0;
+	m_isGroup = !m_hasObject;
+	if (m_hasObject) {
+		GameObject* obj = new GameObject();
+		Shape* shape = new Shape(Shape::createShape(static_cast<Type>(data.object[3][3])));
+		ShapeDataStruct shapeData;
+		shapeData.parameters = data.object;
+		shapeData.type = static_cast<int>(data.object[3][3]);
+		shape->setShapeData(shapeData);
+		obj->addComponent(shape);
+		addObject(std::unique_ptr<GameObject>(obj));
+	}
+	m_transform.setWorldPosition(data.transform[2]);
+	m_transform.setWorldRotation(data.transform[1]);
+}

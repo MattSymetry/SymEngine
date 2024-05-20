@@ -16,6 +16,7 @@ public:
 	glm::vec4 GetViewport();
 	void setTheme();
 	void Gizmo(Scene* scene);
+	void saveScene(Scene* scene, bool saveAs = false);
 private:
 	int m_transformMode = 0;
 	bool m_isMovingElement = false;
@@ -31,4 +32,5 @@ private:
 	void getScene(Scene* scene);
 	void getInspector(Scene* scene);
 	void getSettings(Scene* scene);
+	bool hasCorrectExtension(const std::string& filename, const std::string& extension);
 };

@@ -57,3 +57,10 @@ target_sources(ImGuizmo PRIVATE
 )
 # As ImGuizmo relies on ImGui, it needs to link against it
 target_link_libraries(ImGuizmo PUBLIC imgui)
+
+# Add Cereal as a header-only library
+add_library(cereal INTERFACE)
+target_include_directories(cereal INTERFACE cereal)
+
+add_library(tinyfiledialogs STATIC tinyfiledialogs/tinyfiledialogs.c)
+target_include_directories(tinyfiledialogs PUBLIC tinyfiledialogs)

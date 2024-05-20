@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <functional>
 #include <queue>
+#include "cereal/archives/binary.hpp"
+#include <cereal/types/array.hpp>
 
 Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
 {
@@ -114,6 +116,83 @@ void Scene::CtrV() {
 	}
 }
 
+void Scene::CtrZ() {
+    
+}
+
+void Scene::saveScene(std::string filename) {
+    m_filename = filename;
+    std::string name = filename.substr(0, filename.find_last_of("."));
+    name = name.substr(name.find_last_of("/\\") + 1);
+    m_sceneGraph.rename(name);
+    std::ofstream os(filename, std::ios::binary);
+    cereal::BinaryOutputArchive archive(os);
+    m_sceneData = CreateSnapshot();
+    archive(m_sceneData);
+
+}
+
+void Scene::loadScene(std::string filename) {
+    m_filename = filename;
+    std::ifstream is(filename, std::ios::binary);
+    cereal::BinaryInputArchive archive(is);
+    archive(m_sceneData);
+    m_tmpSceneData = m_sceneData;
+    m_sceneSize = m_sceneData.sceneSize;
+    for (int i = 0; i < m_sceneSize; i++) {
+        m_nodeData[i] = m_sceneData.nodeData[i];
+    }
+    RecreateScene();
+} 
+
+void Scene::RecreateScene() {
+    if (!m_sceneGraph.isLeaf()) {
+        for (auto& child : m_sceneGraph.getChildren()) {
+            RemoveSceneGraphNode(child, false);
+        }
+    }
+	m_sceneGraphNodes.clear();
+    m_sceneSize = m_sceneData.sceneSize;
+    m_sceneGraph = SceneGraphNode(0, false, nullptr, m_sceneData.names[m_sceneSize-1]);
+    m_sceneGraph.setId(0);
+	m_sceneGraphNodes.push_back(&m_sceneGraph);
+    m_idCounter = 0;
+    if (m_sceneSize > 1 && m_sceneData.nodeData[m_sceneSize - 1].data0.x > 0) {
+        for (int i = 0; i < m_sceneData.nodeData[m_sceneSize - 1].data0.x; i++) {
+            CreateNodeFromData(m_sceneData.nodeData[m_sceneSize - 1].data0.y + i, &m_sceneGraph);
+        }
+    }
+    updateNodeData();
+}
+
+SceneGraphNode* Scene::CreateNodeFromData(int id, SceneGraphNode* parent) {
+    m_idCounter++;
+    SceneGraphNode* node = new SceneGraphNode(m_idCounter, false, nullptr, m_sceneData.names[id]);
+    node->setId(m_idCounter);
+    node->setParent(parent);
+    node->setData(m_sceneData.nodeData[id]);
+    m_sceneGraphNodes.push_back(node);
+    if (m_sceneData.nodeData[id].data0.x > 0) {
+        for (int i = 0; i < m_sceneData.nodeData[id].data0.x; i++) {
+			CreateNodeFromData(m_sceneData.nodeData[id].data0.y + i, node);
+        }
+    }
+	return &m_sceneGraph;
+}
+
+SceneData Scene::CreateSnapshot() {
+    SceneData data;
+    std::vector<NodeData> nodes;
+    for (int i = 0; i < m_sceneSize; i++) {
+		nodes.push_back(m_nodeData[i]);
+        data.names.push_back(GetSceneGraphNode(m_nodeData[i].data0.w)->getName());
+	}
+    data.nodeData = nodes;
+    data.sceneSize = m_sceneSize;
+    m_tmpSceneData = data;
+    return data;
+}
+
 SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* parent) {
     if (node) {
 		SceneGraphNode* newNode = AddSceneGraphNode(node->getName() + " Copy");
@@ -189,6 +268,7 @@ void Scene::updateNodeData() {
     m_tmpNodeIndex = 0;
     SerializeNode(&m_sceneGraph);
 	description.sceneSize = m_sceneSize;
+    CreateSnapshot();
 }
 
 void Scene::insertNodeAfter(SceneGraphNode* node, SceneGraphNode* moveBehindNode) {
@@ -312,7 +392,7 @@ SceneGraphNode* Scene::GetSelectedNode() {
 	return GetSceneGraphNode(m_selectedObjectId);
 }
 
-void Scene::RemoveSceneGraphNode(SceneGraphNode* node) {
+void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
     m_selectedObjectId = 0;
     if (node) {
         m_sceneSize--;
@@ -324,5 +404,5 @@ void Scene::RemoveSceneGraphNode(SceneGraphNode* node) {
         m_sceneGraphNodes[node->getId()] = nullptr;
         delete node;
 	}
-    updateNodeData();
+    if (updateNodes) updateNodeData();
 }

@@ -48,6 +48,10 @@ bool isCtrlPressed(SDL_Keymod mod) {
     return (mod & KMOD_CTRL) != 0;
 }
 
+bool isShiftPressed(SDL_Keymod mod) {
+    return (mod & KMOD_LSHIFT) != 0;
+}
+
 void Window::run() {
     bool bQuit = false;
     render = true;
@@ -104,16 +108,24 @@ void Window::run() {
                     switch (e.key.keysym.sym) {
                     case SDLK_c:
                         _scene->CtrC();
-                        std::cout << "Ctrl+C pressed" << std::endl;
                         break;
                     case SDLK_v:
                         _scene->CtrV();
-                        std::cout << "Ctrl+V pressed" << std::endl;
                         break;
                     case SDLK_d:
                         _scene->CtrD();
-                        std::cout << "Ctrl+D pressed" << std::endl;
                         break;
+                    case SDLK_z:
+                        _scene->CtrZ();
+						break;
+                    case SDLK_s:
+                        if (isShiftPressed(mod)) {
+							_editor->saveScene(_scene, true);
+						}
+                        else {
+                            _editor->saveScene(_scene);
+						}
+						break;
                     }
                 }
             }
