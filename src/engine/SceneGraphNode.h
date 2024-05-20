@@ -33,9 +33,52 @@ private:
 	std::string m_name;
 	glm::vec4 m_color;
 	float m_goop;
+	void copyFrom(const SceneGraphNode& other) {
+		m_data = other.m_data;
+		m_parent = other.m_parent;
+		//m_children = other.m_children;
+		m_hasObject = other.m_hasObject;
+		if (other.m_gameObject) {
+			GameObject* gObj = new GameObject();
+			Shape* shape = new Shape(Shape::createShape(other.m_gameObject->getComponent<Shape>()->getType()));
+			shape->setShapeData(other.m_gameObject->getComponent<Shape>()->getStruct());
+			gObj->addComponent(shape);
+			m_gameObject = std::unique_ptr<GameObject>(gObj);
+		}
+		else {
+			m_gameObject.reset();
+		}
+		m_transform = other.m_transform;
+		m_isGroup = other.m_isGroup;
+		m_boolOperation = other.m_boolOperation;
+		m_smoothingFactor = other.m_smoothingFactor;
+		m_id = 9999;
+		m_dataId = other.m_dataId;
+		m_name = other.m_name;
+		m_color = other.m_color;
+		m_goop = other.m_goop;
+		// children
+		for (SceneGraphNode* child : other.m_children) {
+			SceneGraphNode* newChild = new SceneGraphNode();
+			newChild->copyFrom(*child);
+			m_children.push_back(newChild);
+		}
+	}
 public:
 	SceneGraphNode(int id, bool hasObject = false, SceneGraphNode* parent = nullptr, std::string name = "");
+	SceneGraphNode() : m_id(0), m_hasObject(false), m_parent(nullptr), m_name(""), m_isGroup(true), m_boolOperation(Union), m_smoothingFactor(0.0f), m_dataId(-1), m_goop(0.1f) {
+		// Initialize other members if necessary
+	}
 	~SceneGraphNode();
+	SceneGraphNode(const SceneGraphNode& other) {
+		copyFrom(other);
+	}
+	SceneGraphNode& operator=(const SceneGraphNode& other) {
+		if (this != &other) {
+			copyFrom(other);
+		}
+		return *this;
+	}
 	void addChild(SceneGraphNode* child);
 	void removeChild(SceneGraphNode* child);
 	void setParent(SceneGraphNode* parent, bool addToParent = true);

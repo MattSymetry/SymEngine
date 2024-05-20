@@ -156,6 +156,26 @@ public:
 		return m_shapeData.parameters;
 	}
 
+    void setShapeData(ShapeDataStruct data) {
+		m_shapeData = data;
+		type = static_cast<Type>(data.type);
+		switch (type) {
+			case Type::Sphere:
+				shape.sphere.radius = data.parameters[0][0];
+				break;
+			case Type::Box:
+				shape.box.size.x = data.parameters[0][0];
+				shape.box.size.y = data.parameters[0][1];
+				shape.box.size.z = data.parameters[0][2];
+				shape.box.cornerRadius = data.parameters[0][3];
+				break;
+			case Type::Cone:
+				shape.cone.height = data.parameters[0][0];
+				shape.cone.angle = data.parameters[0][1];
+				break;
+		}
+	}
+
     ~Shape() {
         switch (type) {
             case Type::Sphere:

@@ -431,7 +431,7 @@ void Editor::getInspector(Scene* scene)
             ImGui::Text("Smoothing");
             ImGui::PopFont();
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 1.0f, "%.3f")) {
+            if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 10000.0f, "%.3f")) {
                 node->setGoop(goop); 
             }
 
@@ -560,29 +560,6 @@ void Editor::getSettings(Scene* scene)
         ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Grid");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        int showGrid = scene->getShowGrid();
-        bool showGridBool = showGrid;
-        if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
-			scene->showGrid(int(showGridBool));
-		}
-
-        ImGui::Spacing();
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Anti-Aliasing");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        int AA = scene->getAA();
-        if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 16)) {
-            scene->setAA(AA);
-        }
-
-        ImGui::Spacing();
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
         ImGui::Text("Light-Direction");
         ImGui::PopFont();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -591,6 +568,8 @@ void Editor::getSettings(Scene* scene)
 			scene->setSunPosition(sunPos); 
 		}
 
+        ImGui::Spacing();
+        ImGui::Separator();
         ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
@@ -612,6 +591,60 @@ void Editor::getSettings(Scene* scene)
 		if (ImGui::ColorEdit3("##OutlineColor", &outlineColor[0])) {
 			scene->setOutlineColor(outlineColor);
 		}
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Camera Move Speed");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat("##CamSpeed", &scene->m_cameraSpeed, 0.1f, 2.0f)) {
+        }
+
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Camera Orbit Speed");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::SliderFloat("##CamOrbSpeed", &scene->m_orbitSpeed, 0.1f, 2.0f)) {
+        }
+
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Camera Position");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        glm::vec3 camPos = scene->m_camera.getPosition();
+        if (ImGui::DragFloat3("##CamPosition", &camPos[0], 0.1f, -100.0f, 100.0f, "%.3f")) {
+            scene->setCameraPosition(camPos);
+        }
+
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Grid");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int showGrid = scene->getShowGrid();
+        bool showGridBool = showGrid;
+        if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
+            scene->showGrid(int(showGridBool));
+        }
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text("Anti-Aliasing");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int AA = scene->getAA();
+        if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 4)) {
+            scene->setAA(AA);
+        }
+
+        ImGui::Spacing();
 
 	}
 }

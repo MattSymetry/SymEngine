@@ -31,12 +31,12 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     updateNodeData();
     AddBuffer(sizeof(NodeData) * m_maxObjects, vk::BufferUsageFlagBits::eStorageBuffer, vk::DescriptorType::eStorageBuffer, m_nodeData.data());
     // add buffer int with selected ID
-    AddBuffer(4, vk::BufferUsageFlagBits::eStorageBuffer, vk::DescriptorType::eStorageBuffer, &m_selectedObjectId);
+    AddBuffer(4, vk::BufferUsageFlagBits::eStorageBuffer, vk::DescriptorType::eStorageBuffer, &m_selectedObjectId, true);
 }
 
-void Scene::AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void *dataPtr) {
+void Scene::AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void *dataPtr, bool hostVisible) {
     buffers.push_back({
-        size, usage, descriptorType, dataPtr
+        size, usage, descriptorType, dataPtr, hostVisible
     });
 }
 
@@ -63,17 +63,83 @@ void Scene::KeyboardInput(Uint8* state) {
 }
  
 void Scene::MouseInput(int x, int y) {
-    m_camera.Orbit(glm::vec2(x, y), m_deltaTime / 1000.0);
+    m_camera.Orbit(glm::vec2(x, y), (m_deltaTime / 1000.0)*m_orbitSpeed);
     description.camera_position = m_camera.getPosition(); 
 }
 
 void Scene::WheelPressed(int x, int y) {
-	m_camera.Move(glm::vec3(0.0f, 0.0f, 1.0f), m_deltaTime / 1000.0);
-	description.camera_position = m_camera.getPosition(); 
+    glm::mat4& viewMatrix = m_camera.getViewMatrix();
+    glm::vec3 right(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+    glm::vec3 up(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+    glm::vec3 translation = right * -float(x) + up * float(y);
+	m_camera.Move(translation, (m_deltaTime / 1000.0)*m_cameraSpeed);
+	description.camera_position = m_camera.getPosition();
+    description.camera_target = m_camera.getTarget();
 }
 
 void Scene::MousePos(int x, int y) {
 	description.mousePos = glm::ivec2(x, y);
+}
+
+void Scene::CtrD() {
+	SceneGraphNode* node = GetSelectedNode();
+    if (node && node->getId() > 0) {
+        SceneGraphNode* newNode = DuplicateNode(node, node->getParent());
+        insertNodeAfter(newNode, node);
+        SetSelectedId(newNode->getId());
+	}
+}
+
+void Scene::CtrC() {
+	SceneGraphNode* node = GetSelectedNode();
+    if (node && node->getId() > 0) {
+		m_copyNode = *node;
+	}
+}
+
+void Scene::CtrV() {
+    if (m_copyNode.getId() == 9999) {
+        SceneGraphNode* afterNode = GetSelectedNode();
+		SceneGraphNode* newNode = DuplicateNode(&m_copyNode, m_copyNode.getParent());
+        if (afterNode && afterNode->getId() > 0) {
+            insertNodeAfter(newNode, afterNode);
+            if (afterNode->isGroup()) {
+                newNode->setParent(afterNode);
+            }
+        }
+        else {
+            updateNodeData();
+        }
+		SetSelectedId(newNode->getId());
+	}
+}
+
+SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* parent) {
+    if (node) {
+		SceneGraphNode* newNode = AddSceneGraphNode(node->getName() + " Copy");
+		newNode->setParent(parent);
+		newNode->changeBoolOperation(node->getBoolOperation());
+		newNode->setGoop(node->getGoop());
+		newNode->setColor(node->getColor());
+		newNode->getTransform()->setPosition(node->getTransform()->getPosition());
+		newNode->getTransform()->setRotation(node->getTransform()->getRotation());
+        if (!node->isGroup()) {
+			newNode->setIsGroup(false);
+			GameObject* obj = new GameObject();
+			Shape* shape = new Shape(Shape::createShape(node->getObject()->getComponent<Shape>()->getType()));
+			shape->setShapeData(node->getObject()->getComponent<Shape>()->getStruct());
+			obj->addComponent(shape);
+			newNode->addObject(std::unique_ptr<GameObject>(obj));
+		}
+        else {
+			newNode->setIsGroup(true);
+            for (auto& child : node->getChildren()) {
+                SceneGraphNode* newChild = DuplicateNode(child, newNode);
+			}
+		}
+		return newNode;
+	}
+	return nullptr;
 }
 
 void Scene::ClickedInViewPort() {
@@ -99,11 +165,6 @@ void Scene::Update(int deltaTime) {
         NodeData* data = &m_nodeData[i];
         SceneGraphNode* node = GetSceneGraphNode(data->data0.w);
         if (node) { 
-            //node->setDataId(i);
-            //data->data0.x = i;
-            //data->data0.y = node->getParent() ? node->getParent()->getDataId() : -1;
-            //data->data0.z = i + 1;
-            //data->data0.w = node->getChildren().size();
             data->transform = node->getTransform()->getWorldTransform(); 
            
             if (!node->isGroup()) {
@@ -112,7 +173,6 @@ void Scene::Update(int deltaTime) {
             data->data0.z = node->getBoolOperation();
             data->data1.x = node->getGoop(); 
             data->color = node->getColor();
-            //std::cout << "Node " << i << " " << node->getName() << std::endl;
 		}
 	}
 }
@@ -207,6 +267,8 @@ void Scene::AddEmpty(SceneGraphNode* parent, bool isObject, Type shapeType) {
     SceneGraphNode* node = AddSceneGraphNode((isObject ? "Object" : "Group"));
     if (parent) {
 		node->setParent(parent);
+        node->getTransform()->setWorldPosition(parent->getTransform()->getPosition());
+        node->getTransform()->setWorldRotation(parent->getTransform()->getRotation());
 	}
 	if (isObject) {
 		node->setIsGroup(false);

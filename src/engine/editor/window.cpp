@@ -44,6 +44,10 @@ void Window::setupSDLWindow(int width, int height)
     _isInitialized = true;
 }
 
+bool isCtrlPressed(SDL_Keymod mod) {
+    return (mod & KMOD_CTRL) != 0;
+}
+
 void Window::run() {
     bool bQuit = false;
     render = true;
@@ -62,17 +66,23 @@ void Window::run() {
        _scene->MousePos(mouseX, mouseY);
        bool mouseInViewport = (mouseX > viewportBounds.x && mouseX < viewportBounds.y && mouseY > viewportBounds.z && mouseY < viewportBounds.w);
        if (SDL_GetRelativeMouseMode()) {
-           if (mouseInViewport) {
+           if (true) {
                bool isRightButtonDown = mouseButtons & SDL_BUTTON(SDL_BUTTON_RIGHT);
+               bool isWheelButtonDown = mouseButtons & SDL_BUTTON(SDL_BUTTON_MIDDLE);
                // Get 
-               if (!isRightButtonDown) {
+               if (!isRightButtonDown && !isWheelButtonDown) {
                    SDL_SetRelativeMouseMode(SDL_FALSE);
                    SDL_WarpMouseInWindow(_window, _tmpMousePosX, _tmpMousePosY);
                }
-               else {
+               else if(isRightButtonDown) {
                    int deltaX, deltaY;
                    SDL_GetRelativeMouseState(&deltaX, &deltaY);
                    _scene->MouseInput(deltaX, deltaY);
+               } 
+               else {
+                   int deltaX, deltaY;
+				   SDL_GetRelativeMouseState(&deltaX, &deltaY);
+				   _scene->WheelPressed(deltaX, deltaY);
                }
            }
 
@@ -86,9 +96,26 @@ void Window::run() {
                 render = false;
                // renderThread.join();
             }
-            else if (e.type == SDL_KEYDOWN)
+            else if (e.type == SDL_KEYDOWN && !ImGui::IsAnyItemActive())
             {
                 _scene->KeyPressed(e.key.keysym.sym);
+                SDL_Keymod mod = SDL_GetModState();
+                if (isCtrlPressed(mod)) {
+                    switch (e.key.keysym.sym) {
+                    case SDLK_c:
+                        _scene->CtrC();
+                        std::cout << "Ctrl+C pressed" << std::endl;
+                        break;
+                    case SDLK_v:
+                        _scene->CtrV();
+                        std::cout << "Ctrl+V pressed" << std::endl;
+                        break;
+                    case SDLK_d:
+                        _scene->CtrD();
+                        std::cout << "Ctrl+D pressed" << std::endl;
+                        break;
+                    }
+                }
             }
             else if (e.type == SDL_WINDOWEVENT)
             {
@@ -102,7 +129,7 @@ void Window::run() {
                 }
             }
             else if (e.type == SDL_MOUSEBUTTONDOWN) {
-                if (mouseInViewport && e.button.button == SDL_BUTTON_RIGHT) {
+                if (mouseInViewport && (e.button.button == SDL_BUTTON_RIGHT || e.button.button == SDL_BUTTON_MIDDLE)) {
                     SDL_SetRelativeMouseMode(SDL_TRUE);
                     SDL_GetMouseState(&_tmpMousePosX, &_tmpMousePosY);
                     SDL_GetRelativeMouseState(nullptr, nullptr);

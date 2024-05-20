@@ -54,6 +54,7 @@ public:
     void updateNodeData();
     std::array<NodeData, 50> GetNodeData() { return m_nodeData; }
     Camera m_camera;
+    void setCameraPosition(glm::vec3 pos) { m_camera.setPosition(pos); description.camera_position = pos; }
     glm::vec4 getBackgroundColor() { return m_backgroundColor; }
     void setBackgroundColor(glm::vec4 color) { m_backgroundColor = color; description.backgroundColor = color; }
     glm::vec4 getSunPosition() { return m_sunPosition; }
@@ -70,6 +71,13 @@ public:
     void MousePos(int x, int y);
     int hoverId = -1;
     void ClickedInViewPort();
+    void CtrD();
+    SceneGraphNode* DuplicateNode(SceneGraphNode* node, SceneGraphNode* parent);
+    void CtrC();
+    void CtrV();
+    void CtrZ();
+    float m_orbitSpeed = 1.0f;
+    float m_cameraSpeed = 1.0f;
 private:
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
     glm::vec4 m_sunPosition = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -80,6 +88,7 @@ private:
     int m_deltaTime;
     std::vector<SceneGraphNode*> m_sceneGraphNodes;
     SceneGraphNode m_sceneGraph;
+    SceneGraphNode m_copyNode;
     int m_selectedObjectId = 0;
     int m_idCounter = 0;
     int m_sceneSize = 0;
@@ -88,7 +97,7 @@ private:
     static const int m_maxObjects = 50;
     std::array<NodeData, m_maxObjects> m_nodeData;
     void SerializeNode(SceneGraphNode* node);
-    void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr);
+    void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr, bool hostVisible = false);
     void SetupObjects();
     void UpdateObjectData();
     SceneGraphNode* AddSceneGraphNode(std::string name);

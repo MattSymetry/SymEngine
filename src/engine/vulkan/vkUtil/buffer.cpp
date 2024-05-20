@@ -4,7 +4,7 @@
 #include "../../scene.h"
 
 
-Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size_t size, vk::BufferUsageFlags usage) {
+Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size_t size, vk::BufferUsageFlags usage, bool hostVisible = false) {
 
 	//Make Staging Buffer
 	vkUtil::BufferInputChunk input;
@@ -19,8 +19,13 @@ Buffer::Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size
     stagingSize = chunk.size;
 
 	//Make Device Buffer
-	input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
-	input.usage = usage | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+	if (hostVisible) {
+		input.memoryProperties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostCached;
+		input.usage = usage | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+	} else {
+		input.memoryProperties = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		input.usage = usage | vk::BufferUsageFlagBits::eTransferDst;
+	}
 	chunk = vkUtil::createBuffer(input);
     buffer = chunk.buffer;
     deviceMemory = chunk.memory;

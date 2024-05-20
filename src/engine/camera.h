@@ -24,6 +24,7 @@ public:
 	void Orbit(glm::vec2 dir, float deltaTime);
 	void RollLeft(float deltaTime);
 	void RollRight(float deltaTime);
+	void setPosition(glm::vec3 position);
 	glm::vec3 getPosition();
 	glm::vec3 getTarget();
 	float getRoll();

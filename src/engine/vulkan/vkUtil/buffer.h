@@ -8,7 +8,7 @@ public:
 	size_t size, stagingSize;
 	vk::DescriptorBufferInfo descriptor;
 
-	Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size_t size, vk::BufferUsageFlags usage);
+	Buffer(vk::Device logicalDevice, vk::PhysicalDevice physicalDevice, size_t size, vk::BufferUsageFlags usage, bool hostVisible);
 
 	void create_resources(vk::Device logicalDevice);
 
@@ -27,6 +27,7 @@ struct BufferInitParams {
     vk::BufferUsageFlagBits usage;
     vk::DescriptorType descriptorType;
     void* dataPtr = nullptr;
+	bool hostVisible = false;
 };
 
 struct BufferSetup {

@@ -13,7 +13,7 @@ void vkUtil::SwapChainFrame::AddBuffers(const std::vector<BufferInitParams>& buf
     uint32_t i = std::max(static_cast<uint32_t>(bufferSetups.size()), 1u);
     for (const auto& params : bufferParams) {
         BufferSetup bufferSetup = {
-            Buffer(logicalDevice, physicalDevice, params.size, params.usage),
+            Buffer(logicalDevice, physicalDevice, params.size, params.usage, params.hostVisible),
             i, // dstBinding
             params.descriptorType,
             params.dataPtr,

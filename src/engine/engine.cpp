@@ -499,7 +499,7 @@ void Engine::render(Scene* scene) {
 	}
 	if (present == vk::Result::eErrorOutOfDateKHR || present == vk::Result::eSuboptimalKHR) {
 		std::cout << "Recreate" << std::endl;
-		recreate_swapchain(scene);
+		recreate_swapchain(scene); 
 		return;
 	}
 
@@ -568,8 +568,8 @@ Engine::~Engine() {
 
 	vkLogging::Logger::get_logger()->print("Goodbye see you!");
 
-    m_device.destroyDescriptorPool(m_imguiPool);
     ImGui_ImplVulkan_Shutdown();
+    m_device.destroyDescriptorPool(m_imguiPool);
 
 	m_device.destroyFence(m_mainFence);
     m_device.destroyFence(m_immFence);
