@@ -31,7 +31,7 @@ private:
     void renderLoop();
     
 public:
-    Window(int widht, int height, bool debug);
+    Window(int widht, int height, bool debug, std::string filename = "");
     ~Window();
     void run();
 };

@@ -47,7 +47,7 @@ vec4 calcGroup(vec3 pos, int nodeId, bool checkM) {
             vec4 result = results[node.data0.y];
             for (int j = 1; j < node.data0.x; ++j) {
                 int childIndex = node.data0.y + j;
-                result = applyOperation(SceneNodes.nodes[childIndex].data0.z, SceneNodes.nodes[childIndex].data1.x, result, results[childIndex]);
+                result = applyOperation(SceneNodes.nodes[childIndex].data0.z, SceneNodes.nodes[childIndex].data1.x, results[childIndex], result);
             }
             results[i] = result;
         } else if (node.data0.x == -1) { // object

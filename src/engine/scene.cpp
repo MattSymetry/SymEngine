@@ -117,7 +117,36 @@ void Scene::CtrV() {
 }
 
 void Scene::CtrZ() {
-    
+    if (!undoStack.empty()) {
+        redoStack.push(m_tmpSceneData);
+        m_tmpSceneData = undoStack.top();
+        RecreateScene(&m_tmpSceneData);
+        undoStack.pop();
+    }
+}
+
+void Scene::CtrY() {
+    if (!redoStack.empty()) {
+        undoStack.push(m_tmpSceneData);
+        m_tmpSceneData = redoStack.top();
+        RecreateScene(&m_tmpSceneData);
+        redoStack.pop();
+    }
+}
+
+void Scene::performAction(SceneData data) {
+    if (m_isActionOngoing) {
+        m_tmpSceneData = data;
+    }
+    else {
+        m_isActionOngoing = true;
+        undoStack.push(m_tmpSceneData);
+        redoStack.clear();
+    }
+}
+
+void Scene::endAction() {
+	m_isActionOngoing = false;
 }
 
 void Scene::saveScene(std::string filename) {
@@ -127,7 +156,7 @@ void Scene::saveScene(std::string filename) {
     m_sceneGraph.rename(name);
     std::ofstream os(filename, std::ios::binary);
     cereal::BinaryOutputArchive archive(os);
-    m_sceneData = CreateSnapshot();
+    m_sceneData = CreateSnapshot(false);
     archive(m_sceneData);
 
 }
@@ -145,50 +174,78 @@ void Scene::loadScene(std::string filename) {
     RecreateScene();
 } 
 
-void Scene::RecreateScene() {
+void Scene::RecreateScene(SceneData* data) {
+    if (data == nullptr) {
+		data = &m_sceneData;
+	}
+    m_tmpSceneData = *data;
     if (!m_sceneGraph.isLeaf()) {
         for (auto& child : m_sceneGraph.getChildren()) {
             RemoveSceneGraphNode(child, false);
         }
     }
 	m_sceneGraphNodes.clear();
-    m_sceneSize = m_sceneData.sceneSize;
-    m_sceneGraph = SceneGraphNode(0, false, nullptr, m_sceneData.names[m_sceneSize-1]);
+    m_sceneSize = data->sceneSize;
+    m_sceneGraph = SceneGraphNode(0, false, nullptr, data->names[m_sceneSize-1]);
     m_sceneGraph.setId(0);
 	m_sceneGraphNodes.push_back(&m_sceneGraph);
     m_idCounter = 0;
-    if (m_sceneSize > 1 && m_sceneData.nodeData[m_sceneSize - 1].data0.x > 0) {
-        for (int i = 0; i < m_sceneData.nodeData[m_sceneSize - 1].data0.x; i++) {
-            CreateNodeFromData(m_sceneData.nodeData[m_sceneSize - 1].data0.y + i, &m_sceneGraph);
+    if (m_sceneSize > 1 && data->nodeData[m_sceneSize - 1].data0.x > 0) {
+        for (int i = 0; i < data->nodeData[m_sceneSize - 1].data0.x; i++) {
+            CreateNodeFromData(data->nodeData[m_sceneSize - 1].data0.y + i, &m_sceneGraph);
         }
     }
-    updateNodeData();
+    m_AA = data->AA;
+    description.AA = data->AA;
+    m_backgroundColor = data->backgroundColor;
+    description.backgroundColor = data->backgroundColor;
+    m_outlineColor = data->outlineColor;
+    description.outlineCol = data->outlineColor;
+    m_outlineThickness = data->outlineThickness;
+    description.outlineTickness = data->outlineThickness;
+    m_showGrid = data->showGrid;
+    description.showGrid = data->showGrid;
+    m_sunPosition = data->sunPosition;
+    description.sunPos = data->sunPosition;
+
+    updateNodeData(false);
 }
 
 SceneGraphNode* Scene::CreateNodeFromData(int id, SceneGraphNode* parent) {
     m_idCounter++;
-    SceneGraphNode* node = new SceneGraphNode(m_idCounter, false, nullptr, m_sceneData.names[id]);
+    SceneGraphNode* node = new SceneGraphNode(m_idCounter, false, nullptr, m_tmpSceneData.names[id]);
     node->setId(m_idCounter);
     node->setParent(parent);
-    node->setData(m_sceneData.nodeData[id]);
+    node->setData(m_tmpSceneData.nodeData[id]);
     m_sceneGraphNodes.push_back(node);
-    if (m_sceneData.nodeData[id].data0.x > 0) {
-        for (int i = 0; i < m_sceneData.nodeData[id].data0.x; i++) {
-			CreateNodeFromData(m_sceneData.nodeData[id].data0.y + i, node);
+    if (m_tmpSceneData.nodeData[id].data0.x > 0) {
+        for (int i = 0; i < m_tmpSceneData.nodeData[id].data0.x; i++) {
+			CreateNodeFromData(m_tmpSceneData.nodeData[id].data0.y + i, node);
         }
     }
-	return &m_sceneGraph;
+	return &m_sceneGraph; 
 }
 
-SceneData Scene::CreateSnapshot() {
+SceneData Scene::CreateSnapshot(bool saveToHistory) {
     SceneData data;
-    std::vector<NodeData> nodes;
+    data.names = std::vector<std::string>(m_sceneSize);
+    std::vector<NodeData> nodes(m_sceneSize);
     for (int i = 0; i < m_sceneSize; i++) {
-		nodes.push_back(m_nodeData[i]);
-        data.names.push_back(GetSceneGraphNode(m_nodeData[i].data0.w)->getName());
+		nodes[i] = m_nodeData[i];
+        data.names[i] = GetSceneGraphNode(m_nodeData[i].data0.w)->getName();
 	}
     data.nodeData = nodes;
     data.sceneSize = m_sceneSize;
+    data.AA = m_AA;
+    data.backgroundColor = m_backgroundColor;
+    data.outlineColor = m_outlineColor;
+    data.outlineThickness = m_outlineThickness;
+    data.showGrid = m_showGrid;
+    data.sunPosition = m_sunPosition;
+    if (saveToHistory) {
+        performAction(m_tmpSceneData);
+        endAction();
+    }
     m_tmpSceneData = data;
     return data;
 }
@@ -231,8 +288,13 @@ void Scene::ClickedInViewPort() {
 }
  
 void Scene::MouseScroll(int y) {
-    glm::vec3 dir = glm::normalize(m_camera.getTarget() - m_camera.getPosition());
-	m_camera.Move(dir * float(y) * m_camera.getScrollSpeed(), m_deltaTime / 1000.0);
+    glm::vec3 dist = m_camera.getTarget() - m_camera.getPosition();
+    glm::vec3 dir = glm::normalize(dist);
+    m_camera.Move(dir * float(y) * m_camera.getScrollSpeed(), m_deltaTime / 1000.0, false);
+    dist = m_camera.getTarget() - m_camera.getPosition();
+    if (glm::length(dist) < 0.5f) {
+	    m_camera.Move(-dir * float(y) * m_camera.getScrollSpeed(), m_deltaTime / 1000.0, false);
+    }
 	description.camera_position = m_camera.getPosition(); 
 }
 
@@ -264,11 +326,11 @@ void Scene::UpdateViewport(glm::vec4 viewport) {
 	}
 }
 
-void Scene::updateNodeData() {
+void Scene::updateNodeData(bool saveHistory) {
     m_tmpNodeIndex = 0;
     SerializeNode(&m_sceneGraph);
 	description.sceneSize = m_sceneSize;
-    CreateSnapshot();
+    CreateSnapshot(saveHistory && m_sceneSize > 1);
 }
 
 void Scene::insertNodeAfter(SceneGraphNode* node, SceneGraphNode* moveBehindNode) {
@@ -314,6 +376,8 @@ void Scene::SerializeNode(SceneGraphNode* root) {
                 serializedNode.data0.y = m_tmpNodeIndex - node->getChildren().size();
                 serializedNode.data0.x = (node->isGroup()) ? node->getChildren().size() : -1;
                 serializedNode.data0.w = node->getId();
+                serializedNode.data1.x = node->getGoop();
+                serializedNode.color = node->getColor();
 
                 if (!node->isGroup()) {
                     serializedNode.object = node->getObject()->getData();
@@ -392,13 +456,55 @@ SceneGraphNode* Scene::GetSelectedNode() {
 	return GetSceneGraphNode(m_selectedObjectId);
 }
 
+void Scene::setBackgroundColor(glm::vec4 color) {
+	m_backgroundColor = color;
+	description.backgroundColor = color;
+    performAction(m_tmpSceneData);
+    m_tmpSceneData.backgroundColor = color;
+}
+
+void Scene::setSunPosition(glm::vec4 pos) {
+	m_sunPosition = pos;
+	description.sunPos = pos;
+	performAction(m_tmpSceneData);
+	m_tmpSceneData.sunPosition = pos;
+}
+
+void Scene::setAA(int aa) {
+	m_AA = aa;
+	description.AA = aa;
+	performAction(m_tmpSceneData);
+	m_tmpSceneData.AA = aa;
+}
+
+void Scene::setOutlineColor(glm::vec4 color) {
+	m_outlineColor = color;
+	description.outlineCol = color;
+	performAction(m_tmpSceneData);
+	m_tmpSceneData.outlineColor = color;
+}
+
+void Scene::setOutlineThickness(float thickness) {
+	m_outlineThickness = thickness;
+	description.outlineTickness = thickness;
+	performAction(m_tmpSceneData);
+	m_tmpSceneData.outlineThickness = thickness;
+}
+
+void Scene::showGrid(int show) {
+	m_showGrid = show;
+	description.showGrid = show;
+	performAction(m_tmpSceneData);
+	m_tmpSceneData.showGrid = show;
+}
+
 void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
     m_selectedObjectId = 0;
     if (node) {
         m_sceneSize--;
         if (!node->isLeaf()) {
             for (auto& child : node->getChildren()) {
-				RemoveSceneGraphNode(child);
+				RemoveSceneGraphNode(child, updateNodes);
 			}
 		}
         m_sceneGraphNodes[node->getId()] = nullptr;

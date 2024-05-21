@@ -103,7 +103,7 @@ void Editor::Docker()
             ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
 
             auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
-            auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.22f, nullptr, &dockspace_id);
+            auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
             auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.05f, nullptr, &dockspace_id);
 
             ImGui::DockBuilderDockWindow("Code", dock_id_down);
@@ -335,6 +335,7 @@ void Editor::getInspector(Scene* scene)
         SceneGraphNode* node = scene->GetSelectedNode();
         if (node != nullptr)
         {
+			bool hasChanges = false;
 			ImGui::Begin("Inspector");
             float avail = ImGui::GetContentRegionAvail().x;
             
@@ -376,6 +377,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::DragFloat3("##Position", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setPosition(position);
+                    hasChanges = true;
                 }
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                 ImGui::Text("Rotation");
@@ -383,6 +385,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
                     transform->setRotation(rotation);
+                    hasChanges = true;
                 }
 			}
 			else {
@@ -395,6 +398,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::DragFloat3("##GPosition", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldPosition(position);
+                    hasChanges = true;
                 }
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                 ImGui::Text("Rotation");
@@ -402,6 +406,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
                     transform->setWorldRotation(rotation);
+                    hasChanges = true;
                 }
 			}
 
@@ -431,6 +436,7 @@ void Editor::getInspector(Scene* scene)
             if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
                 BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
                 node->changeBoolOperation(operation);
+                hasChanges = true;
             }
 
             float goop = node->getGoop();
@@ -440,6 +446,7 @@ void Editor::getInspector(Scene* scene)
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 10000.0f, "%.3f")) {
                 node->setGoop(goop); 
+                hasChanges = true;
             }
 
             if (!node->isGroup())
@@ -455,6 +462,7 @@ void Editor::getInspector(Scene* scene)
                 glm::vec4 color = node->getColor();
                 if (ImGui::ColorEdit3("##Color", &color[0])) {
                     node->setColor(color);
+                    hasChanges = true;
                 }
         
                 ImGui::Spacing();
@@ -481,6 +489,7 @@ void Editor::getInspector(Scene* scene)
                 if (ImGui::Combo("##Shape", &currentShapeId, shapeNames.data(), shapeNames.size())) {
                     Type newType = NameToTypeMap.find(shapeNames[currentShapeId])->second;
                     shape->setType(newType);
+                    hasChanges = true;
                 }
 
                 ImGui::Spacing();
@@ -496,6 +505,7 @@ void Editor::getInspector(Scene* scene)
                     if (ImGui::DragFloat("##Radius", &sphere.radius, 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (sphere.radius < 0.01f) { sphere.radius = 0.01f; }
 						shape->shape.sphere = sphere;
+                        hasChanges = true;
 					}
                     }
 					break;
@@ -508,6 +518,7 @@ void Editor::getInspector(Scene* scene)
                     if (ImGui::DragFloat3("##Size", &box.size[0], 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (box.size.x < 0.01f) { box.size.x = 0.01f; }
 						shape->shape.box = box;
+                        hasChanges = true;
 					}
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text("Rounding");
@@ -516,6 +527,7 @@ void Editor::getInspector(Scene* scene)
                     if (ImGui::DragFloat("##Rounding", &box.cornerRadius, 0.01f, 0.0f, 100.0f, "%.3f")) {
                         if (box.cornerRadius < 0.0f) { box.cornerRadius = 0.0f; }
 						shape->shape.box = box;
+                        hasChanges = true;
 					}
                     }
                     break;
@@ -528,6 +540,7 @@ void Editor::getInspector(Scene* scene)
                     if (ImGui::DragFloat("##Height", &cone.height, 0.01f, 0.01f, 100.0f, "%.3f")) {
                         if (cone.height < 0.01f) { cone.height = 0.01f; }
 						shape->shape.cone = cone;
+                        hasChanges = true;
 					}
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text("Angle");
@@ -537,6 +550,7 @@ void Editor::getInspector(Scene* scene)
                         if (cone.angle < 1.0f) { cone.angle = 1.0f; }
 						else if (cone.angle > 70.0f) { cone.angle = 70.0f; }
                         shape->shape.cone = cone;
+                        hasChanges = true;
                     }
                     }
 					break;
@@ -545,7 +559,7 @@ void Editor::getInspector(Scene* scene)
                 }
 
             }
-     
+            if (hasChanges) scene->performAction(scene->CreateSnapshot(false));
 			ImGui::End(); 
 		}
     }
@@ -841,7 +855,11 @@ void Editor::Gizmo(Scene* scene)
         ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
             ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, tmpPos);
         ImGuizmo::DecomposeMatrixToComponents(tmpPos, translation, rotation, scale);
-        scene->GetSelectedNode()->getTransform()->setWorldPosition(glm::vec3(translation[0], translation[1], translation[2]));
+        glm::vec3 p = glm::vec3(translation[0], translation[1], translation[2]);
+        if (p != position) {
+            scene->GetSelectedNode()->getTransform()->setWorldPosition(p);
+            scene->performAction(scene->CreateSnapshot(false));
+        }
         
         float tmp[16];
         glm::vec3 rot = glm::vec3(0.0f);
@@ -849,7 +867,11 @@ void Editor::Gizmo(Scene* scene)
         ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
             ImGuizmo::OPERATION::ROTATE, ImGuizmo::MODE::WORLD, tmp);
         ImGuizmo::DecomposeMatrixToComponents(tmp, translation, rotation, scale);
-        scene->GetSelectedNode()->getTransform()->rotate(glm::vec3(rotation[0], rotation[1], rotation[2]));
+        glm::vec3 r = glm::vec3(rotation[0], rotation[1], rotation[2]);
+        if (r != rot) {
+            scene->GetSelectedNode()->getTransform()->rotate(r);
+			scene->performAction(scene->CreateSnapshot(false));
+		}
     }
     ImGui::End();
 }

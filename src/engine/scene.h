@@ -5,6 +5,7 @@
 #include "SceneGraphNode.h"
 #include "cereal/types/vector.hpp"
 #include "cereal/types/string.hpp"
+#include "undoStack.h"
 
 struct SceneDescription {
     alignas(16) glm::ivec2 mousePos;
@@ -20,23 +21,6 @@ struct SceneDescription {
     alignas(16) glm::vec4 outlineCol;
     alignas(4) int showGrid;
     alignas(4) int AA;
-};
-
-struct SceneData {
-    std::vector<NodeData> nodeData;
-    std::vector<std::string> names;
-    int sceneSize;
-
-    bool operator==(const SceneData& other) const {
-        return sceneSize == other.sceneSize && 
-            nodeData == other.nodeData &&
-            names == other.names;
-    }
-
-    template <class Archive>
-    void serialize(Archive& archive) {
-		archive(nodeData, names, sceneSize);
-	}
 };
 
 class Scene {
@@ -70,22 +54,22 @@ public:
     void SetSelectedId(int id) { m_selectedObjectId = id; }
     SceneGraphNode* GetSceneGraphNode(int id);
     SceneGraphNode* GetSelectedNode();
-    void updateNodeData();
+    void updateNodeData(bool saveHistrory = true);
     std::array<NodeData, 50> GetNodeData() { return m_nodeData; }
     Camera m_camera;
     void setCameraPosition(glm::vec3 pos) { m_camera.setPosition(pos); description.camera_position = pos; }
     glm::vec4 getBackgroundColor() { return m_backgroundColor; }
-    void setBackgroundColor(glm::vec4 color) { m_backgroundColor = color; description.backgroundColor = color; }
+    void setBackgroundColor(glm::vec4 color);
     glm::vec4 getSunPosition() { return m_sunPosition; }
-    void setSunPosition(glm::vec4 pos) { m_sunPosition = pos; description.sunPos = pos; }
+    void setSunPosition(glm::vec4 pos);
     float getOutlineThickness() { return m_outlineThickness; }
-    void setOutlineThickness(float thickness) { m_outlineThickness = thickness; description.outlineTickness = thickness; }
+    void setOutlineThickness(float thickness);
     glm::vec4 getOutlineColor() { return m_outlineColor; }
-    void setOutlineColor(glm::vec4 color) { m_outlineColor = color; description.outlineCol = color; }
+    void setOutlineColor(glm::vec4 color);
     void insertNodeAfter(SceneGraphNode* node, SceneGraphNode* moveBehindNode);
-    void showGrid(int show) { m_showGrid = show; description.showGrid = show; }
+    void showGrid(int show);
     int getShowGrid() { return m_showGrid; }
-    void setAA(int aa) { m_AA = aa; description.AA = aa; }
+    void setAA(int aa);
     int getAA() { return m_AA; }
     void MousePos(int x, int y);
     int hoverId = -1;
@@ -95,6 +79,7 @@ public:
     void CtrC();
     void CtrV();
     void CtrZ();
+    void CtrY();
     float m_orbitSpeed = 1.0f;
     float m_cameraSpeed = 1.0f;
     void saveScene(std::string filename);
@@ -102,6 +87,9 @@ public:
     std::string getFilename() { return m_filename; }
     void setFilename(std::string filename) { m_filename = filename; }
     bool hasSceneChanged() { return !(m_sceneData == m_tmpSceneData); }
+    void performAction(SceneData data);
+    void endAction();
+    SceneData CreateSnapshot(bool saveToHistory = true);
 private:
     std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
@@ -124,11 +112,13 @@ private:
     void SerializeNode(SceneGraphNode* node);
     void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr, bool hostVisible = false);
     void SetupObjects();
-    void UpdateObjectData();
+    bool m_isActionOngoing = false;
     SceneGraphNode* AddSceneGraphNode(std::string name);
-    void RecreateScene();
+    void RecreateScene(SceneData* data = nullptr);
     SceneGraphNode* CreateNodeFromData(int id, SceneGraphNode* parent);
-    SceneData CreateSnapshot();
     SceneData m_sceneData;
     SceneData m_tmpSceneData;
+    static const int m_maxUndoRedo = 100;
+    UndoStack undoStack = UndoStack(m_maxUndoRedo);
+    UndoStack redoStack = UndoStack(m_maxUndoRedo);
 };

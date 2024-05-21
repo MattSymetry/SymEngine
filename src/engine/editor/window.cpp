@@ -6,7 +6,7 @@
 #include "imgui_impl_vulkan.h"
 
 using namespace std;
-Window::Window(int width, int height, bool debug)
+Window::Window(int width, int height, bool debug, std::string filename)
 {
     _width = width;
     _height = height;
@@ -14,6 +14,9 @@ Window::Window(int width, int height, bool debug)
     setupTimer();
     
     _scene = new Scene(glm::vec4(0.0f, 0.0f, width, height));
+    if (!filename.empty()) {
+		_scene->loadScene(filename);
+	}
     
     _engine = new Engine(width, height, _window, _scene);
 
@@ -89,7 +92,10 @@ void Window::run() {
 				   _scene->WheelPressed(deltaX, deltaY);
                }
            }
+       }
 
+       if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+           _scene->endAction();
        }
 
        if (SDL_PollEvent(&e)) {
@@ -118,6 +124,9 @@ void Window::run() {
                     case SDLK_z:
                         _scene->CtrZ();
 						break;
+                    case SDLK_y:
+						_scene->CtrY();
+                        break;
                     case SDLK_s:
                         if (isShiftPressed(mod)) {
 							_editor->saveScene(_scene, true);

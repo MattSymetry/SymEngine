@@ -19,7 +19,7 @@ public:
 	Camera(glm::vec3 position, glm::vec3 target, float roll, float fov, float aspectRatio);
 	~Camera();
 	void Reset();
-	void Move(glm::vec3 dir, float deltaTime);
+	void Move(glm::vec3 dir, float deltaTime, bool moveTarget = true);
 	void LookAt(glm::vec3 target);
 	void Orbit(glm::vec2 dir, float deltaTime);
 	void RollLeft(float deltaTime);
