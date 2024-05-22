@@ -8,7 +8,11 @@ file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 source_group("Shader" FILES ${GLSL_SOURCE_FILES})
-add_executable(SymEngine ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES})
+add_executable(SymEngine ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES} ${PROJECT_SOURCE_DIR}/../../resources/resource.rc)
+
+if (WIN32)
+    target_sources(SymEngine PRIVATE ${PROJECT_SOURCE_DIR}/../../resources/resource.rc)
+endif()
 
 set(ASSETS_DIR "${PROJECT_SOURCE_DIR}/../../assets")
 

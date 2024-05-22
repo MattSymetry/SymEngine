@@ -28,7 +28,7 @@ void Window::setupSDLWindow(int width, int height)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     _window = SDL_CreateWindow(
-        "SymEngine",
+        "SYMYS",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         width,
@@ -123,7 +123,7 @@ void Window::calcFramerate()
     if (_deltaTime >= 1) {
         float framerate = 1.0f / (_deltaTime / 1000.0f);
         if (_currentFrameTime - _lastFPSupdate > 500 ) {
-            snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", framerate);
+            snprintf(_windowTitle, sizeof(_windowTitle), "SYMYS | FPS: %.0f", framerate);
             //SDL_SetWindowTitle(_window, _windowTitle);
             _lastFPSupdate = _currentFrameTime;
         }

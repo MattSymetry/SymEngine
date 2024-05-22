@@ -36,7 +36,7 @@ void Window::setupSDLWindow(int width, int height)
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
     _window = SDL_CreateWindow(
-        "SymEngine",
+        "SYMYS",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
         width,
@@ -182,7 +182,7 @@ void Window::run() {
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", ImGui::GetIO().Framerate);
+        snprintf(_windowTitle, sizeof(_windowTitle), "SYMYS | FPS: %.0f", ImGui::GetIO().Framerate);
         ImGuiIO& io = ImGui::GetIO(); (void)io;
         if (!io.WantCaptureMouse && SDL_GetMouseState(NULL, NULL) & SDL_BUTTON(SDL_BUTTON_LEFT))
         {
@@ -232,7 +232,7 @@ void Window::calcFramerate()
     if (_deltaTime >= 1) {
         _framerate = 1.0f / (_deltaTime / 1000.0f);
         if (_currentFrameTime - _lastFPSupdate > 500 ) {
-            //snprintf(_windowTitle, sizeof(_windowTitle), "SymEngine | FPS: %.0f", _framerate);
+            //snprintf(_windowTitle, sizeof(_windowTitle), "SYMYS | FPS: %.0f", _framerate);
             SDL_SetWindowTitle(_window, _windowTitle);
             _lastFPSupdate = _currentFrameTime;
         }
