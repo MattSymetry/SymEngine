@@ -17,6 +17,7 @@ public:
 	void setTheme();
 	void Gizmo(Scene* scene);
 	void saveScene(Scene* scene, bool saveAs = false);
+	void openScene(Scene* scene);
 private:
 	int m_transformMode = 0;
 	bool m_isMovingElement = false;

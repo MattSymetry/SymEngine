@@ -10,6 +10,7 @@ struct SceneData {
     int sceneSize;
     int showGrid;
     int AA;
+    int selectedId;
     glm::vec4 backgroundColor;
     glm::vec4 sunPosition;
     float outlineThickness;
@@ -20,6 +21,7 @@ struct SceneData {
             nodeData == other.nodeData &&
             showGrid == other.showGrid &&
             AA == other.AA &&
+            selectedId == other.selectedId &&
             backgroundColor == other.backgroundColor &&
             sunPosition == other.sunPosition &&
             outlineThickness == other.outlineThickness &&
@@ -29,7 +31,7 @@ struct SceneData {
 
     template <class Archive>
     void serialize(Archive& archive) {
-        archive(nodeData, names, sceneSize, showGrid, AA, backgroundColor, sunPosition, outlineThickness, outlineColor);
+        archive(nodeData, names, sceneSize, showGrid, AA, selectedId, backgroundColor, sunPosition, outlineThickness, outlineColor);
     }
 };
 

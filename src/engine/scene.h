@@ -51,7 +51,7 @@ public:
 
     SceneGraphNode* GetSceneGraph() { return &m_sceneGraph; }
     int GetSelectedId() { return m_selectedObjectId; }
-    void SetSelectedId(int id) { m_selectedObjectId = id; }
+    void SetSelectedId(int id);
     SceneGraphNode* GetSceneGraphNode(int id);
     SceneGraphNode* GetSelectedNode();
     void updateNodeData(bool saveHistrory = true);
@@ -90,6 +90,7 @@ public:
     void performAction(SceneData data);
     void endAction();
     SceneData CreateSnapshot(bool saveToHistory = true);
+    void newScene();
 private:
     std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);

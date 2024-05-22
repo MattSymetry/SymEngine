@@ -762,28 +762,15 @@ void Editor::MenuBar(Scene* scene)
         // Populate your menu bar here
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::Selectable("New Scene"))
+            {
+                ImGui::CloseCurrentPopup();
+				scene->newScene();
+            }
             if (ImGui::Selectable("Open Scene"))
             {
                 ImGui::CloseCurrentPopup();
-                const char* filterPatterns[] = { "*.sym" };
-                const char* loadFilePath = tinyfd_openFileDialog(
-                    "Open Scene",
-                    "",
-                    1,
-                    filterPatterns,
-                    NULL,
-                    0
-                );
-
-                if (loadFilePath) {
-                    std::string filename(loadFilePath);
-                    if (hasCorrectExtension(loadFilePath, ".sym")) {
-                        scene->loadScene(loadFilePath);
-                    }
-                    else {
-						tinyfd_messageBox("Error", "File is not a .sym file", "ok", "error", 1);
-					}
-                }
+                openScene(scene);
             }
             if (ImGui::Selectable("Save Scene"))
             {
@@ -900,6 +887,27 @@ void Editor::saveScene(Scene* scene, bool saveAs) {
     }
 }
 
+void Editor::openScene(Scene* scene) {
+    const char* filterPatterns[] = { "*.sym" };
+    const char* loadFilePath = tinyfd_openFileDialog(
+        "Open Scene",
+        "",
+        1,
+        filterPatterns,
+        NULL,
+        0
+    );
+
+    if (loadFilePath) {
+        std::string filename(loadFilePath);
+        if (hasCorrectExtension(loadFilePath, ".sym")) {
+            scene->loadScene(loadFilePath);
+        }
+        else {
+            tinyfd_messageBox("Error", "File is not a .sym file", "ok", "error", 1);
+        }
+    }
+}
 
 void  Editor::setTheme()
 {

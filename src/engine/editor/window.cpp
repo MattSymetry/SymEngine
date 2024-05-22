@@ -135,6 +135,12 @@ void Window::run() {
                             _editor->saveScene(_scene);
 						}
 						break;
+                    case SDLK_n:
+                        _scene->newScene();
+                        break;
+                    case SDLK_o:
+                        _editor->openScene(_scene);
+						break;
                     }
                 }
             }

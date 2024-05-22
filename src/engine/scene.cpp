@@ -196,6 +196,7 @@ void Scene::RecreateScene(SceneData* data) {
         }
     }
     m_AA = data->AA;
+    m_selectedObjectId = data->selectedId;
     description.AA = data->AA;
     m_backgroundColor = data->backgroundColor;
     description.backgroundColor = data->backgroundColor;
@@ -237,6 +238,7 @@ SceneData Scene::CreateSnapshot(bool saveToHistory) {
     data.nodeData = nodes;
     data.sceneSize = m_sceneSize;
     data.AA = m_AA;
+    data.selectedId = m_selectedObjectId;
     data.backgroundColor = m_backgroundColor;
     data.outlineColor = m_outlineColor;
     data.outlineThickness = m_outlineThickness;
@@ -278,12 +280,18 @@ SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* paren
 	return nullptr;
 }
 
+void Scene::SetSelectedId(int id) {
+	m_selectedObjectId = id;
+    performAction(m_tmpSceneData);
+    m_tmpSceneData.selectedId = m_selectedObjectId;
+}
+
 void Scene::ClickedInViewPort() {
     if (hoverId != -1) {
-		m_selectedObjectId = hoverId;
+        SetSelectedId(hoverId);
 	}
     else {
-        m_selectedObjectId = 0;
+        SetSelectedId(0);
     }
 }
  
@@ -511,4 +519,30 @@ void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
         delete node;
 	}
     if (updateNodes) updateNodeData();
+}
+
+void Scene::newScene() {
+    if (!m_sceneGraph.isLeaf()) {
+        for (auto& child : m_sceneGraph.getChildren()) {
+            RemoveSceneGraphNode(child, false);
+        }
+    }
+	m_sceneGraph = SceneGraphNode(0, false, nullptr, "Scene");
+    m_sceneGraph.setId(0);
+	m_sceneGraphNodes.clear();
+	m_sceneGraphNodes.push_back(&m_sceneGraph);
+	m_idCounter = 0;
+	m_selectedObjectId = 0;
+    setAA(1);
+    showGrid(1);
+    setBackgroundColor(glm::vec4(0.01f, 0.01f, 0.01f, 1.0f));
+    setSunPosition(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    setOutlineThickness(0.0f);
+    setOutlineColor(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+    setCameraPosition(glm::vec3(0.0f, 2.0f, 2.0f));
+	m_sceneSize = 1;
+	updateNodeData(false);
+    undoStack = UndoStack(m_maxUndoRedo);
+    redoStack = UndoStack(m_maxUndoRedo);
+    m_filename = "";
 }
