@@ -8,10 +8,6 @@
 #include "vulkan/vkInit/commands.h"
 #include "vulkan/vkInit/sync.h"
 #include "vulkan/vkInit/descriptors.h"
-#define IMGUI_ENABLE_DOCKING
-#include "imgui.h"
-#include "imgui_impl_sdl2.h"
-#include "imgui_impl_vulkan.h"
 
 
 
@@ -184,6 +180,24 @@ void Engine::make_assets(Scene* scene) {
 	}
 }
 
+void Engine::SetupImGuiFonts(ImGuiIO& io) {
+	// Load icon font from memory
+	std::vector<char> iconFontData = LoadEmbeddedFontResource(IDR_FONT2);
+	static const ImWchar icons_ranges[] = { ICON_MIN_LC, ICON_MAX_LC, 0 };
+	ImFontConfig icons_config;
+	icons_config.MergeMode = true;
+	icons_config.GlyphOffset = ImVec2(0, 3);
+	//icons_config.PixelSnapH = true;
+
+	// Load main font from memory
+	std::vector<char> fontData = LoadEmbeddedFontResource(IDR_FONT1);
+	ImFont* myFont = io.Fonts->AddFontFromMemoryTTF(fontData.data(), fontData.size(), 16.0f);
+	io.Fonts->AddFontFromMemoryTTF(iconFontData.data(), iconFontData.size(), 16.0f, &icons_config, icons_ranges);
+	ImFont* myFontSmall = io.Fonts->AddFontFromMemoryTTF(fontData.data(), fontData.size(), 14.0f);
+	io.Fonts->AddFontFromMemoryTTF(iconFontData.data(), iconFontData.size(), 14.0f, &icons_config, icons_ranges);
+	io.Fonts->Build();
+}
+
 void Engine::init_imgui()
 {
     VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -211,11 +225,8 @@ void Engine::init_imgui()
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.IniFilename = NULL;
-	std::string executableDir = vkUtil::getExecutableDirectory();
-	executableDir += "/assets/fonts/RobotoMono-Regular.ttf";
-	ImFont* myFont = io.Fonts->AddFontFromFileTTF(executableDir.data(), 16.0f);
-	ImFont* myFontSmall = io.Fonts->AddFontFromFileTTF(executableDir.data(), 14.0f);
-	io.Fonts->Build();
+	
+	SetupImGuiFonts(io);
 
     ImGui_ImplSDL2_InitForVulkan(m_window);
 	VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo = {};
@@ -560,6 +571,18 @@ void Engine::cleanup_swapchain() {
 
 	m_device.destroyDescriptorPool(m_frameDescriptorPool[pipelineType::COMPUTE]);
 
+}
+
+std::vector<char> Engine::LoadEmbeddedFontResource(int resourceID) {
+	HMODULE hModule = GetModuleHandle(NULL);
+	HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(resourceID), RT_FONT);
+	HGLOBAL hLoadedResource = LoadResource(hModule, hResource);
+	DWORD dwResourceSize = SizeofResource(hModule, hResource);
+	const void* pResourceData = LockResource(hLoadedResource);
+
+	std::vector<char> fontData(static_cast<const char*>(pResourceData),
+		static_cast<const char*>(pResourceData) + dwResourceSize);
+	return fontData;
 }
 
 Engine::~Engine() {

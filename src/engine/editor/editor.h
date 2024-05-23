@@ -19,6 +19,9 @@ public:
 	void saveScene(Scene* scene, bool saveAs = false);
 	void openScene(Scene* scene);
 private:
+	glm::vec4 xColor = glm::vec4(0.000f, 1.000f, 0.557f, 1.000f);
+	glm::vec4 yColor = glm::vec4(1.000f, 0.000f, 0.502f, 1.000f);
+	glm::vec4 zColor = glm::vec4(0.478f, 0.000f, 1.000f, 1.000f);
 	int m_transformMode = 0;
 	bool m_isMovingElement = false;
 	ImGuiID dockspace_id;
@@ -34,4 +37,24 @@ private:
 	void getInspector(Scene* scene);
 	void getSettings(Scene* scene);
 	bool hasCorrectExtension(const std::string& filename, const std::string& extension);
+	bool drawFloat3(std::string label, glm::vec3& value, float speed = 0.01f, float min = 0.0f, float max = 0.0f);
+	struct Keybinding {
+		const char* key;
+		const char* description;
+	};
+
+	// Define your keybindings
+	const Keybinding keybindings[11] = {
+		{"F", "Focus on selected object"},
+		{"Delete", "Delete selected object"},
+		{"Ctrl+C", "Copy selected object"},
+		{"Ctrl+V", "Paste copied object"},
+		{"Ctrl+D", "Duplicate selected object"},
+		{"Ctrl+Z", "Undo last action"},
+		{"Ctrl+Y", "Redo last undone action"},
+		{"Ctrl+S", "Save current scene"},
+		{"Ctrl+Shift+S", "Save current scene as"},
+		{"Ctrl+N", "Create new scene"},
+		{"Ctrl+O", "Open existing scene"}
+	};
 };

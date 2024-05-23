@@ -418,6 +418,9 @@ void Scene::SerializeNode(SceneGraphNode* root) {
 void Scene::AddEmpty(SceneGraphNode* parent, bool isObject, Type shapeType) {
     SceneGraphNode* node = AddSceneGraphNode((isObject ? "Object" : "Group"));
     if (parent) {
+        while (!parent->isGroup()) {
+			parent = parent->getParent();
+		}
 		node->setParent(parent);
         node->getTransform()->setWorldPosition(parent->getTransform()->getPosition());
         node->getTransform()->setWorldRotation(parent->getTransform()->getRotation());

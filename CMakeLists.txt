@@ -1,6 +1,6 @@
 ﻿cmake_minimum_required (VERSION 3.8)
 
-project ("SymEngine")
+project ("SYMYS")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -43,9 +43,4 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
   list(APPEND GLSL_FILES ${GLSL})
 endforeach(GLSL)
 
-foreach(ASSET ${ASSETS_SOURCE_FILES})
-  list(APPEND ASSET_FILES ${ASSET})
-endforeach(ASSET)
-
 set(GLSL_FILES ${GLSL_FILES} CACHE INTERNAL "List of SPIR-V binary files")
-set(ASSET_FILES ${ASSET_FILES} CACHE INTERNAL "List of assets")

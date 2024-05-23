@@ -10,6 +10,7 @@ target_include_directories(glm INTERFACE glm)
 
 add_library(sdl2 INTERFACE)
 set(sdl2_DIR "SDL_PATH" CACHE PATH "Path to SDL2")
+set(sdl2_image_DIR "SDL_IMG_PATH" CACHE PATH "Path to SDL2 Image")
 
 if (WIN32)
 target_include_directories(sdl2 INTERFACE ${sdl2_DIR}/include ${sdl2_image_DIR}/include)

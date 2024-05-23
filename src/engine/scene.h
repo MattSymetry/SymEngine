@@ -80,8 +80,8 @@ public:
     void CtrV();
     void CtrZ();
     void CtrY();
-    float m_orbitSpeed = 1.0f;
-    float m_cameraSpeed = 1.0f;
+    float m_orbitSpeed = 0.1f;
+    float m_cameraSpeed = 0.1f;
     void saveScene(std::string filename);
     void loadScene(std::string filename);
     std::string getFilename() { return m_filename; }

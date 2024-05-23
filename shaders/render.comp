@@ -101,14 +101,26 @@ float planeToLines(vec4 plane)
 	return min((smoothstep(width, 0.0, abs(uv.x - 0.5)) + smoothstep(width, 0.0, abs(uv.y - 0.5))) * plane.z, 1.0) * fade;
 }
 
+vec2 planeToAxis(vec4 plane)
+{
+ 	float width = 0.006 * (plane.w);
+    float fade = smoothstep(100.0, -20.0, plane.w);
+    float xAxis = smoothstep(width, 0.0, abs(plane.x));
+    float yAxis = smoothstep(width, 0.0, abs(plane.y));
+    return vec2(xAxis, yAxis) * plane.z * fade;
+}
+
 vec4 getGrid(vec3 rayOrigin, vec3 rayDirection)
 {
     vec4 xzPlane = castXZPlane(rayOrigin.zyx, rayDirection.zyx);
     float xzLines = planeToLines(xzPlane);
+    vec2 xzAxis = planeToAxis(xzPlane);
 
     vec4 grid = vec4(0.0);
-    
-    grid += xzLines;
+
+    vec4 x = vec4(0.0, 1.0, 0.557, 1.0);
+    vec4 z = vec4(0.478, 0.0, 1.0, 1.0);
+    grid += xzLines*0.3 + x*xzAxis.x + z*xzAxis.y;
     
     return grid;
 }
@@ -172,7 +184,7 @@ vec3 render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
     }
     else {
         // Grid
-        vec4 grid = (getGrid(ro, rd) * 0.3) * SceneData.showGrid;
+        vec4 grid = (getGrid(ro, rd)) * SceneData.showGrid;
         col = mix(col, grid.xyz, grid.w);
     }
 

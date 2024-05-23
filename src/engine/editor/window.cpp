@@ -4,6 +4,9 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
+#include <dwmapi.h>
+
+#pragma comment(lib, "dwmapi.lib")
 
 using namespace std;
 Window::Window(int width, int height, bool debug, std::string filename)
@@ -43,6 +46,14 @@ void Window::setupSDLWindow(int width, int height)
         height,
         window_flags
     );
+
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    if (SDL_GetWindowWMInfo(_window, &wmInfo)) {
+        HWND hwnd = wmInfo.info.win.window;
+        BOOL enabled = TRUE;
+        DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &enabled, sizeof(enabled));
+    }
     
     _isInitialized = true;
 }
@@ -257,5 +268,6 @@ Window::~Window() {
     delete _scene;
     if (_isInitialized) {
         SDL_DestroyWindow(_window);
+        SDL_Quit();
     }
 }

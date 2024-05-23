@@ -19,6 +19,34 @@ bool Editor::hasCorrectExtension(const std::string& filename, const std::string&
         filename.compare(filename.size() - extension.size(), extension.size(), extension) == 0;
 }
 
+bool Editor::drawFloat3(std::string label, glm::vec3& value, float speed, float min, float max) {
+	bool changed = false;
+    float width = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x * 2) / 3.0f ;
+    ImGui::PushItemWidth(width);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(xColor.x, xColor.y, xColor.z, xColor.w));
+    if (ImGui::DragFloat(("##X"+label).c_str(), &value.x, speed, min, max, "%.3f")) {
+        changed = true;
+    }
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    // spacer on x of 
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(yColor.x, yColor.y, yColor.z, yColor.w));
+    if (ImGui::DragFloat(("##Y" + label).c_str(), &value.y, speed, min, max, "%.3f")) {
+		changed = true;
+	}
+    ImGui::PopStyleColor();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(zColor.x, zColor.y, zColor.z, zColor.w));
+    if (ImGui::DragFloat(("##Z" + label).c_str(), &value.z, speed, min, max, "%.3f")) {
+        changed = true;
+    }
+    ImGui::PopItemWidth();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+    return changed;
+}
+
 glm::vec4 Editor::GetViewport()
 {
 	ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -106,20 +134,38 @@ void Editor::Docker()
             auto dock_id_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
             auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.05f, nullptr, &dockspace_id);
 
-            ImGui::DockBuilderDockWindow("Code", dock_id_down);
-            ImGui::DockBuilderDockWindow("Scene", dock_id_left);
-            ImGui::DockBuilderDockWindow("Lighting", dock_id_left);
-            ImGui::DockBuilderDockWindow("Inspector", dock_id_right);
-            ImGui::DockBuilderDockWindow("Settings", dock_id_right);
+            ImGui::DockBuilderDockWindow(ICON_LC_CODE_XML " Code", dock_id_down);
+            ImGui::DockBuilderDockWindow(ICON_LC_LAYERS_3 " Scene", dock_id_left);
+            ImGui::DockBuilderDockWindow(ICON_LC_SETTINGS " Scene Settings", dock_id_left);
+            ImGui::DockBuilderDockWindow(ICON_LC_TEXT_CURSOR_INPUT" Inspector", dock_id_right);
             ImGui::DockBuilderFinish(dockspace_id);
         }
     }
 }
 
+
 void Editor::getScene(Scene* scene)
 {
     if (scene != nullptr)
     {
+        float avail = ImGui::GetContentRegionAvail().x;
+        ImGui::SetNextItemWidth(avail);
+        if (ImGui::Button(ICON_LC_BOXES " Add Group", ImVec2(avail, 0))) {
+            scene->AddEmpty(scene->GetSelectedNode(), false);
+		}
+        float buttonWidth = avail * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
+        int i = 0;
+        for (const auto& object : NameToTypeMap)
+        {
+            i++;
+            if (i % 2 == 0 && i != 0) { ImGui::SameLine(); }
+            if (ImGui::Button(object.first.c_str(), ImVec2(buttonWidth, 0))) { 
+                scene->AddEmpty(scene->GetSelectedNode(), true, object.second);
+            }
+        }
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
         SceneGraphNode* sceneGraph = scene->GetSceneGraph();
         DrawSceneGraphNode(sceneGraph, true, false, scene);
         if (ImGui::IsMouseReleased(0))
@@ -135,12 +181,12 @@ void Editor::getScene(Scene* scene)
         }
         if (ImGui::BeginPopup("Scene Popup"))
         {
-            if (ImGui::Selectable("Add Group"))
+            if (ImGui::Selectable(ICON_LC_BOXES " Add Group"))
             {
                 createGroup = true;
                 ImGui::CloseCurrentPopup();
             }
-            if (ImGui::BeginMenu("Add Object"))
+            if (ImGui::BeginMenu(ICON_LC_PLUS " Add Object"))
             {
                 // List of all object types you can add
                 for (const auto& object : NameToTypeMap)
@@ -195,8 +241,32 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.7f);
             nodeFlags |= ImGuiTreeNodeFlags_SpanAvailWidth;
             std::string suff = (id == 0 && scene->hasSceneChanged()) ? " *" : "";
+            std::string pre = "";
+            if (id != 0) {
+                if (node->getBoolOperation() == BoolOperatios::Union) { pre = ICON_LC_SQUARE_PLUS " "; }
+			    else if (node->getBoolOperation() == BoolOperatios::Intersection) { pre = ICON_LC_SQUARE_SLASH " "; }
+			    else if (node->getBoolOperation() == BoolOperatios::Difference) { pre = ICON_LC_SQUARE_MINUS " "; }
+
+                if (isGroup) { pre += ICON_LC_BOXES " "; }
+				else { 
+                    switch (node->getObject()->getComponent<Shape>()->getType())
+                    {
+                        case Type::Sphere:
+						    pre += ICON_LC_CIRCLE " ";
+						break;
+						case Type::Box:
+                            pre += ICON_LC_CUBOID " ";
+                            break;
+                        case Type::Cone:
+                            pre += ICON_LC_CONE " ";
+							break;
+                    default:
+                        break;
+                    }
+                }
+            }
             nodeOpen =
-                ImGui::TreeNodeEx((void*)(intptr_t)id, nodeFlags, "%s", (node->getName()+suff).c_str());
+                ImGui::TreeNodeEx((void*)(intptr_t)id, nodeFlags, "%s", (pre+node->getName()+suff).c_str());
             ImGui::PopItemWidth();
             if (ImGui::IsItemClicked()) {
                 scene->SetSelectedId(id);
@@ -213,12 +283,12 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
             {
                 if (isGroup)
                 {
-                    if (ImGui::Selectable("Add Group"))
+                    if (ImGui::Selectable(ICON_LC_BOXES " Add Group"))
                     {
                         createGroup = true;
                         ImGui::CloseCurrentPopup();
                     }
-                    if (ImGui::BeginMenu("Add Object"))
+                    if (ImGui::BeginMenu(ICON_LC_PLUS " Add Object"))
                     {
                         // List of all object types you can add
                         for (const auto& object : NameToTypeMap)
@@ -235,7 +305,7 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                 }
                 if (id != 0)
                 {
-                    if (ImGui::Selectable("Delete Object"))
+                    if (ImGui::Selectable(ICON_LC_TRASH_2 " Delete Object"))
                     {
                         destroyEntity = true;
                         ImGui::CloseCurrentPopup();
@@ -336,7 +406,6 @@ void Editor::getInspector(Scene* scene)
         if (node != nullptr)
         {
 			bool hasChanges = false;
-			ImGui::Begin("Inspector");
             float avail = ImGui::GetContentRegionAvail().x;
             
             
@@ -349,104 +418,86 @@ void Editor::getInspector(Scene* scene)
 				node->rename(std::string(nameBuffer));
 			}
 
-            ImGui::Spacing(); 
-            ImGui::Separator();
-            ImGui::Spacing();
-
-            if (node->getId() == 0)
-            {
-                float buttonWidth = avail * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
-                if (ImGui::Button("Add Group", ImVec2(buttonWidth, 0))) { scene->AddEmpty(node, false); }
-                ImGui::SameLine();
-                if (ImGui::Button("Add Object", ImVec2(buttonWidth, 0))) { scene->AddEmpty(node, true); }
-                ImGui::End();
-                return;
-            }
-             
-            // Transform
-            char* TransformModeNames[] = { "Local Transform", "Global Transform"};
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            ImGui::Combo("##Transform", &m_transformMode, TransformModeNames, IM_ARRAYSIZE(TransformModeNames));
-            Transform* transform = node->getTransform();
-            if (m_transformMode == 0) {
-                glm::vec3 position = transform->getPosition();
-                glm::vec3 rotation = transform->getRotation();
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text("Position");
-                ImGui::PopFont();
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##Position", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
-                    transform->setPosition(position);
-                    hasChanges = true;
-                }
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text("Rotation");
-                ImGui::PopFont();
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##Rotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
-                    transform->setRotation(rotation);
-                    hasChanges = true;
-                }
-			}
-			else {
-                glm::mat4 globalTransform = transform->getWorldTransform();
-                glm::vec3 position = globalTransform[2];
-                glm::vec3 rotation = globalTransform[1];
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text("Position");
-                ImGui::PopFont();
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##GPosition", &position[0], 0.01f, 0.0f, 0.0f, "%.3f")) {
-                    transform->setWorldPosition(position);
-                    hasChanges = true;
-                }
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text("Rotation");
-                ImGui::PopFont();
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat3("##GRotation", &rotation[0], 0.5f, 0.0f, 0.0f, "%.3f")) {
-                    transform->setWorldRotation(rotation);
-                    hasChanges = true;
-                }
-			}
-
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Spacing();
 
-            if (node->isGroup())
-			{
-                float buttonWidth = avail * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
-				if (ImGui::Button("Add Group", ImVec2(buttonWidth, 0))){scene->AddEmpty(node, false);}
-                ImGui::SameLine();
-				if (ImGui::Button("Add Object", ImVec2(buttonWidth, 0))) {scene->AddEmpty(node, true);}
-			}
             if (node->getId() != 0)
-			{
-                if (ImGui::Button("Delete", ImVec2(avail, 0))) {scene->RemoveSceneGraphNode(node);}
-            }
+            {
+                if (ImGui::Button(ICON_LC_TRASH_2 " Delete", ImVec2(avail, 0))) { scene->RemoveSceneGraphNode(node); }
 
-            ImGui::Spacing();
-            ImGui::Separator();
-            ImGui::Spacing();
 
-            int currentBoolOperation = node->getBoolOperation();
-            char* BoolOperationsNames[] = { "Union", "Intersection", "Difference" };
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
-                BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
-                node->changeBoolOperation(operation);
-                hasChanges = true;
-            }
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
 
-            float goop = node->getGoop();
-            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-            ImGui::Text("Smoothing");
-            ImGui::PopFont();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 10000.0f, "%.3f")) {
-                node->setGoop(goop); 
-                hasChanges = true;
+                // Transform
+                char* TransformModeNames[] = { "Local Transform", "Global Transform" };
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                ImGui::Combo("##Transform", &m_transformMode, TransformModeNames, IM_ARRAYSIZE(TransformModeNames));
+                Transform* transform = node->getTransform();
+                if (m_transformMode == 0) {
+                    glm::vec3 position = transform->getPosition();
+                    glm::vec3 rotation = transform->getRotation();
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text(ICON_LC_AXIS_3D " Position");
+                    ImGui::PopFont();
+                    if (drawFloat3("Position"+node->getId(), position, 0.01f, 0.0f, 0.0f)) {
+                        transform->setPosition(position);
+                        hasChanges = true;
+                    }
+
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text(ICON_LC_ROTATE_3D " Rotation");
+                    ImGui::PopFont();
+                    if (drawFloat3("Rotation" + node->getId(), rotation, 0.5f, 0.0f, 0.0f)) {
+                        transform->setRotation(rotation);
+                        hasChanges = true;
+                    }
+                }
+                else {
+                    glm::mat4 globalTransform = transform->getWorldTransform();
+                    glm::vec3 position = globalTransform[2];
+                    glm::vec3 rotation = globalTransform[1];
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text(ICON_LC_AXIS_3D " Position");
+                    ImGui::PopFont();
+                    if (drawFloat3("GPosition" + node->getId(), position, 0.01f, 0.0f, 0.0f)) {
+                        transform->setWorldPosition(position);
+                        hasChanges = true;
+                    }
+
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text(ICON_LC_ROTATE_3D " Rotation");
+                    ImGui::PopFont();
+                    if (drawFloat3("GRotation" + node->getId(), rotation, 0.5f, 0.0f, 0.0f)) {
+                        transform->setWorldRotation(rotation);
+                        hasChanges = true;
+                    }
+                }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                float goop = node->getGoop();
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text(ICON_LC_SQUIRCLE " Smoothing");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 10000.0f, "%.3f")) {
+                    node->setGoop(goop);
+                    hasChanges = true;
+                }
+
+                int currentBoolOperation = node->getBoolOperation();
+                char* BoolOperationsNames[] = { ICON_LC_SQUARE_PLUS " Union", ICON_LC_SQUARE_SLASH " Intersection", ICON_LC_SQUARE_MINUS " Difference" };
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::Combo("##Boolean Operation", &currentBoolOperation, BoolOperationsNames, IM_ARRAYSIZE(BoolOperationsNames))) {
+                    BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
+                    node->changeBoolOperation(operation);
+                    hasChanges = true;
+                }
             }
 
             if (!node->isGroup())
@@ -456,7 +507,7 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Spacing();
 
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text("Color");
+                ImGui::Text(ICON_LC_PALETTE " Color");
                 ImGui::PopFont();
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 glm::vec4 color = node->getColor();
@@ -514,12 +565,13 @@ void Editor::getInspector(Scene* scene)
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text("Size");
                     ImGui::PopFont();
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::DragFloat3("##Size", &box.size[0], 0.01f, 0.01f, 100.0f, "%.3f")) {
+                    if (drawFloat3("Size" + node->getId(), box.size, 0.01f, 0.001f, 100.0f)) {
                         if (box.size.x < 0.01f) { box.size.x = 0.01f; }
-						shape->shape.box = box;
+                        if (box.size.y < 0.01f) { box.size.y = 0.01f; }
+                        if (box.size.z < 0.01f) { box.size.z = 0.01f; }
+                        shape->shape.box = box;
                         hasChanges = true;
-					}
+                    }
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text("Rounding");
                     ImGui::PopFont();
@@ -560,7 +612,6 @@ void Editor::getInspector(Scene* scene)
 
             }
             if (hasChanges) scene->performAction(scene->CreateSnapshot(false));
-			ImGui::End(); 
 		}
     }
 }
@@ -570,7 +621,7 @@ void Editor::getSettings(Scene* scene)
 	if (scene != nullptr)
 	{
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Background Color");
+        ImGui::Text(ICON_LC_PALETTE " Background Color");
         ImGui::PopFont();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         glm::vec4 color = scene->getBackgroundColor();
@@ -581,12 +632,12 @@ void Editor::getSettings(Scene* scene)
         ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Light-Direction");
+        ImGui::Text(ICON_LC_SUN " Light-Direction");
         ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        glm::vec4 sunPos = scene->getSunPosition();
-        if (ImGui::DragFloat3("##SunPosition", &sunPos[0], 0.01f, -1.0f, 1.0f, "%.3f")) {
-			scene->setSunPosition(sunPos); 
+        glm::vec3 sunPos = scene->getSunPosition();
+        if (drawFloat3("##SunPosition", sunPos, 0.01f, -1.0f, 1.0f))
+        {
+			scene->setSunPosition(glm::vec4(sunPos.x, sunPos.y, sunPos.z, 0.0f));
 		}
 
         ImGui::Spacing();
@@ -594,7 +645,7 @@ void Editor::getSettings(Scene* scene)
         ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Outline Thickness");
+        ImGui::Text(ICON_LC_MINUS " Outline Thickness");
         ImGui::PopFont();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         float outlineThickness = scene->getOutlineThickness();
@@ -605,7 +656,7 @@ void Editor::getSettings(Scene* scene)
 		ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Outline Color");
+        ImGui::Text(ICON_LC_PALETTE " Outline Color");
         ImGui::PopFont();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         glm::vec4 outlineColor = scene->getOutlineColor();
@@ -618,52 +669,13 @@ void Editor::getSettings(Scene* scene)
         ImGui::Spacing();
 
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Camera Move Speed");
+        ImGui::Text(ICON_LC_VIDEO " Camera Position");
         ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderFloat("##CamSpeed", &scene->m_cameraSpeed, 0.1f, 2.0f)) {
-        }
-
-        ImGui::Spacing();
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Camera Orbit Speed");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderFloat("##CamOrbSpeed", &scene->m_orbitSpeed, 0.1f, 2.0f)) {
-        }
-
-        ImGui::Spacing();
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Camera Position");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         glm::vec3 camPos = scene->m_camera.getPosition();
-        if (ImGui::DragFloat3("##CamPosition", &camPos[0], 0.1f, -100.0f, 100.0f, "%.3f")) {
-            scene->setCameraPosition(camPos);
-        }
-
-        ImGui::Spacing();
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Grid");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        int showGrid = scene->getShowGrid();
-        bool showGridBool = showGrid;
-        if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
-            scene->showGrid(int(showGridBool));
-        }
-
-        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-        ImGui::Text("Anti-Aliasing");
-        ImGui::PopFont();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        int AA = scene->getAA();
-        if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 4)) {
-            scene->setAA(AA);
-        }
+        if (drawFloat3("##CamPosition", camPos, 0.1f, -100.0f, 100.0f))
+        {
+			scene->setCameraPosition(camPos);
+		}
 
         ImGui::Spacing();
 
@@ -673,7 +685,7 @@ void Editor::getSettings(Scene* scene)
 void Editor::SettingsPanel(Scene* scene)
 {
     auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar;
-    ImGui::Begin("Scene", nullptr, flags);
+    ImGui::Begin(ICON_LC_LAYERS_3 " Scene", nullptr, flags);
     if (ImGui::IsWindowDocked())
     {
         ImVec2 pos = ImGui::GetWindowPos();
@@ -687,7 +699,7 @@ void Editor::SettingsPanel(Scene* scene)
     getScene(scene);
     ImGui::End();
     //--------------------------------------------------------------------------
-    ImGui::Begin("Lighting", nullptr, flags);
+    ImGui::Begin(ICON_LC_SETTINGS " Scene Settings", nullptr, flags);
     if (ImGui::IsWindowDocked())
     {
         ImVec2 pos = ImGui::GetWindowPos();
@@ -698,21 +710,10 @@ void Editor::SettingsPanel(Scene* scene)
     {
         m_maskScene = glm::vec4(0.0f);
     }
-    ImGui::Text("Hello, Lighting!");
-    std::array<NodeData, 50> nodeData = scene->GetNodeData();
-    for (int i = 0; i < 10; i++)
-    {
-        glm::vec3 position = nodeData[i].transform[2];
-        ImGui::InputInt("realID", &nodeData[i].data0.w);
-		ImGui::InputInt("ChildCount", &nodeData[i].data0.x);
-		ImGui::InputInt("FirstChild:", &nodeData[i].data0.y);
-        ImGui::InputInt("Operator:", &nodeData[i].data0.z);
-        ImGui::InputFloat3("##pos", &position[0]);
-        ImGui::Text("Data-----------------------------");
-    }
+    getSettings(scene);
     ImGui::End();
     //--------------------------------------------------------------------------
-    ImGui::Begin("Code", nullptr, flags);
+    ImGui::Begin(ICON_LC_CODE_XML " Code", nullptr, flags);
     if (ImGui::IsWindowDocked())
     {
         ImVec2 pos = ImGui::GetWindowPos();
@@ -726,21 +727,7 @@ void Editor::SettingsPanel(Scene* scene)
     ImGui::Text("Hello, Code!");
     ImGui::End();
     //--------------------------------------------------------------------------
-    ImGui::Begin("Settings", nullptr, flags);
-    if (ImGui::IsWindowDocked())
-    {
-        ImVec2 pos = ImGui::GetWindowPos();
-        ImVec2 size = ImGui::GetWindowSize();
-        m_maskInspector = glm::vec4(pos.x, pos.y, size.x, size.y);
-    }
-    else
-    {
-        m_maskInspector = glm::vec4(0.0f);
-    }
-    getSettings(scene);
-    ImGui::End();
-    //--------------------------------------------------------------------------
-    ImGui::Begin("Inspector", nullptr, flags);
+    ImGui::Begin(ICON_LC_TEXT_CURSOR_INPUT" Inspector", nullptr, flags);
     if (ImGui::IsWindowDocked())
     {
         ImVec2 pos = ImGui::GetWindowPos();
@@ -762,23 +749,23 @@ void Editor::MenuBar(Scene* scene)
         // Populate your menu bar here
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::Selectable("New Scene"))
+            if (ImGui::Selectable(ICON_LC_FILE_PLUS " New Scene"))
             {
                 ImGui::CloseCurrentPopup();
 				scene->newScene();
             }
-            if (ImGui::Selectable("Open Scene"))
+            if (ImGui::Selectable(ICON_LC_FOLDER_OPEN_DOT " Open Scene"))
             {
                 ImGui::CloseCurrentPopup();
                 openScene(scene);
             }
-            if (ImGui::Selectable("Save Scene"))
+            if (ImGui::Selectable(ICON_LC_SAVE " Save Scene"))
             {
                 ImGui::CloseCurrentPopup();
                 saveScene(scene);
 
             }
-            if (ImGui::Selectable("Save Scene As"))
+            if (ImGui::Selectable(ICON_LC_SAVE_ALL " Save Scene As"))
             {
                 ImGui::CloseCurrentPopup();
                 saveScene(scene, true);
@@ -786,31 +773,77 @@ void Editor::MenuBar(Scene* scene)
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Settings")) 
+        {
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text(ICON_LC_VIDEO " Camera Move Speed");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::SliderFloat("##CamSpeed", &scene->m_cameraSpeed, 0.1f, 2.0f))
+            {
+            }
+
+            ImGui::Spacing();
+
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text(ICON_LC_ROTATE_3D " Camera Orbit Speed");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::SliderFloat("##CamOrbSpeed", &scene->m_orbitSpeed, 0.1f, 2.0f))
+            {
+            }
+
+            ImGui::Spacing();
+
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text(ICON_LC_MINUS " Anti-Aliasing");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            int AA = scene->getAA();
+            if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 4)) {
+                scene->setAA(AA);
+            }
+
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text(ICON_LC_GRID_3X3 " Grid");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            int showGrid = scene->getShowGrid();
+            bool showGridBool = showGrid;
+            if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
+                scene->showGrid(int(showGridBool));
+            }
+            
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Render"))
         {
             // Menu items
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Add"))
+        if (ImGui::BeginMenu("Keybindings"))
         {
-            // Menu items
-            if (ImGui::Selectable("Add Group"))
+            if (ImGui::BeginTable("KeybindingsTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
             {
-                ImGui::CloseCurrentPopup();
-                scene->AddEmpty(scene->GetSceneGraph(), false);
-            }
-            if (ImGui::BeginMenu("Add Object"))
-            {
-                // List of all object types you can add
-                for (const auto& object : NameToTypeMap)
+                // Setup columns
+                ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch);
+
+                // Table headers
+                ImGui::TableHeadersRow();
+
+                // Populate the table with keybindings
+                for (const Keybinding& kb : keybindings)
                 {
-                    if (ImGui::Selectable(object.first.c_str()))
-                    {
-                        ImGui::CloseCurrentPopup();
-                        scene->AddEmpty(scene->GetSceneGraph(), true, NameToTypeMap.find(object.first)->second);
-                    }
+                    ImGui::TableNextRow();
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%s", kb.key);
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::Text("%s", kb.description);
                 }
-                ImGui::EndMenu();
+
+                // End the table
+                ImGui::EndTable();
             }
             ImGui::EndMenu();
         }
@@ -822,9 +855,8 @@ void Editor::MenuBar(Scene* scene)
 
 void Editor::Gizmo(Scene* scene)
 {
-    // No need to reapply style inside the window, just set up once before ImGui::Begin()
     ImGuizmo::SetOrthographic(false);
-    ImGuizmo::SetDrawlist();
+    ImGuizmo::SetDrawlist(); 
 
     float windowWidth = (float)ImGui::GetWindowWidth();
     float windowHeight = (float)ImGui::GetWindowHeight();
@@ -924,7 +956,7 @@ void  Editor::setTheme()
     style.ChildRounding = 5.0f;
     style.ChildBorderSize = 1.0f;
     style.PopupRounding = 10.0f;
-    style.PopupBorderSize = 0.0f;
+    style.PopupBorderSize = 1.0f;
     style.FramePadding = ImVec2(5.0f, 3.5f);
     style.FrameRounding = 5.0f;
     style.FrameBorderSize = 0.0f;
@@ -977,11 +1009,11 @@ void  Editor::setTheme()
     style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.5490196347236633f);
     style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.5490196347236633f);
     style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.5490196347236633f);
-    style.Colors[ImGuiCol_Tab] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.5490196347236633f);
+    style.Colors[ImGuiCol_Tab] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.4490196347236633f);
     style.Colors[ImGuiCol_TabHovered] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 1.0f);
     style.Colors[ImGuiCol_TabActive] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 1.0f);
-    style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.501960813999176f, 0.3019607961177826f, 0.5490196347236633f, 0.0f);
-    style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.0f);
+    style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.4490196347236633f);
+    style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.4490196347236633f);
     style.Colors[ImGuiCol_PlotLines] = ImVec4(0.6695278882980347f, 0.6695212125778198f, 0.6695212125778198f, 1.0f);
     style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 1.0f);
     style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.501960813999176f, 0.3019607961177826f, 1.0f, 0.5490196347236633f);

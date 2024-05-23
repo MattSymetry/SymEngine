@@ -33,9 +33,9 @@ struct Cone {
 
 enum class Type { Sphere = 0, Box = 1, Cone = 2};
 static const std::map<std::string, Type> NameToTypeMap = {
-    {"Sphere", Type::Sphere},
-    {"Box", Type::Box},
-    {"Cone", Type::Cone}
+    {ICON_LC_CIRCLE " Sphere", Type::Sphere},
+    {ICON_LC_CUBOID " Box", Type::Box},
+    {ICON_LC_CONE " Cone", Type::Cone}
 };
 class Shape : public Component {
 public:

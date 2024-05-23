@@ -4,6 +4,10 @@
 #include "scene.h"
 #include "vulkan/vkJob/job.h"
 #include <functional>
+#define IMGUI_ENABLE_DOCKING
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_vulkan.h"
 
 class Engine {
 
@@ -17,8 +21,9 @@ public:
     
     void immediate_submit(std::function<void(vk::CommandBuffer cmd)>&& function);
 
-private:
+	static std::vector<char> LoadEmbeddedFontResource(int resourceID);
 
+private:
 	int m_width;
 	int m_height;
 	SDL_Window* m_window;
@@ -68,6 +73,7 @@ private:
     // imgui
     void init_imgui();
 	void recreate_imgui();
+	void SetupImGuiFonts(ImGuiIO& io);
 
 	//device setup
 	void make_device(Scene* scene);

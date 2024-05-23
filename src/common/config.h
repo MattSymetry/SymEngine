@@ -8,6 +8,7 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <SDL_syswm.h>
 
 
 #include <iostream>
@@ -23,6 +24,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "../../resources/resource.h"
+#include "IconsMaterialDesignIcons.h"
 
 //--------- Assets -------------//
 

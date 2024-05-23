@@ -2,3 +2,4 @@
 
 IDI_APP_ICON ICON "icon.ico"
 IDR_FONT1 FONT "RobotoMono-Regular.ttf"
+IDR_FONT2 FONT "lucideSmall.ttf"
