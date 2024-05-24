@@ -10,7 +10,7 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     m_sceneSize = 1; 
     m_sceneGraphNodes.push_back(&m_sceneGraph);
     float aspect = viewport.z / viewport.w;
-    m_camera = Camera(glm::vec3(0.0f, 2.0f, 2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
+    m_camera = Camera(glm::vec3(-2.0f, 2.0f, 2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
     description = {}; 
     description.mousePos = glm::ivec2(400, 400);
     description.camera_position = m_camera.getPosition();
@@ -542,7 +542,7 @@ void Scene::newScene() {
     setSunPosition(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
     setOutlineThickness(0.0f);
     setOutlineColor(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-    setCameraPosition(glm::vec3(0.0f, 2.0f, 2.0f));
+    setCameraPosition(glm::vec3(-2.0f, 2.0f, 2.0f));
 	m_sceneSize = 1;
 	updateNodeData(false);
     undoStack = UndoStack(m_maxUndoRedo);

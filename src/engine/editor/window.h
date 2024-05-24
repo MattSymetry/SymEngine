@@ -14,6 +14,7 @@ private:
     char _windowTitle[100];
     bool _isInitialized = false;
     std::atomic<bool> render = false;
+    bool openAddPanel = false;
     
     int _lastFrameTime, _currentFrameTime, _lastFPSupdate;
     int _numFrames;

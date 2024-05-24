@@ -853,6 +853,48 @@ void Editor::MenuBar(Scene* scene)
     m_menuBarHeight = ImGui::GetFrameHeight();
 }
 
+void Editor::openAddPanel(ImGuiContext* context, Scene* scene)
+{
+    std::cout << "Open Add Panel" << std::endl;
+    ImGui::SetCurrentContext(context);
+
+    // Get the current mouse cursor position
+    ImVec2 mousePos = ImGui::GetMousePos();
+
+    // Set the position of the next window to the cursor position
+    ImGui::SetNextWindowPos(mousePos, ImGuiCond_Appearing);
+
+    // Open the popup
+    ImGui::OpenPopup("AddMenu");
+
+}
+
+void Editor::AddPanel(Scene* scene) {
+
+    if (ImGui::BeginPopup("AddMenu"))
+    {
+        if (!ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        if (ImGui::Selectable(ICON_LC_BOXES " Group"))
+        {
+            ImGui::CloseCurrentPopup();
+            scene->AddEmpty(scene->GetSelectedNode());
+        }
+        for (const auto& object : NameToTypeMap)
+        {
+            if (ImGui::Selectable(object.first.c_str()))
+            {
+				ImGui::CloseCurrentPopup();
+				scene->AddEmpty(scene->GetSelectedNode(), true, object.second);
+			}
+		}
+
+        ImGui::EndPopup();
+    }
+}
+
 void Editor::Gizmo(Scene* scene)
 {
     ImGuizmo::SetOrthographic(false);

@@ -76,6 +76,7 @@ void Window::run() {
     
     while (!bQuit)
     {
+        openAddPanel = false;
         // Events
        glm::vec4 viewp = _editor->GetViewport();
        glm::vec4 viewportBounds = glm::vec4(viewp.x, viewp.x + viewp.z, 0.0f, viewp.w);
@@ -154,6 +155,9 @@ void Window::run() {
 						break;
                     }
                 }
+                if (isShiftPressed(mod) && e.key.keysym.sym == SDLK_a) {
+                    openAddPanel = true;
+                }
             }
             else if (e.type == SDL_WINDOWEVENT)
             {
@@ -208,6 +212,12 @@ void Window::run() {
         {
 			_scene->UpdateViewport(viewp);
 		}
+
+        if (openAddPanel) {
+			_editor->openAddPanel(ImGui::GetCurrentContext(), _scene);
+		}
+
+        _editor->AddPanel(_scene);
 
         ImGui::Render();
         

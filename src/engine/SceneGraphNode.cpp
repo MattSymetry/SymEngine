@@ -103,7 +103,7 @@ void SceneGraphNode::setData(const NodeData data) {
 	m_boolOperation = static_cast<BoolOperatios>(data.data0.z);
 	m_goop = data.data1.x;
 	m_color = data.color;
-	m_hasObject = data.data0.x <= 0;
+	m_hasObject = data.data0.x <= 0;// TODO group in group
 	m_isGroup = !m_hasObject;
 	if (m_hasObject) {
 		GameObject* obj = new GameObject();

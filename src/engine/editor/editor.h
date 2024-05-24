@@ -18,6 +18,8 @@ public:
 	void Gizmo(Scene* scene);
 	void saveScene(Scene* scene, bool saveAs = false);
 	void openScene(Scene* scene);
+	void openAddPanel(ImGuiContext* context, Scene* scene);
+	void AddPanel(Scene* scene);
 private:
 	glm::vec4 xColor = glm::vec4(0.000f, 1.000f, 0.557f, 1.000f);
 	glm::vec4 yColor = glm::vec4(1.000f, 0.000f, 0.502f, 1.000f);
@@ -44,7 +46,7 @@ private:
 	};
 
 	// Define your keybindings
-	const Keybinding keybindings[11] = {
+	const Keybinding keybindings[12] = {
 		{"F", "Focus on selected object"},
 		{"Delete", "Delete selected object"},
 		{"Ctrl+C", "Copy selected object"},
@@ -55,6 +57,7 @@ private:
 		{"Ctrl+S", "Save current scene"},
 		{"Ctrl+Shift+S", "Save current scene as"},
 		{"Ctrl+N", "Create new scene"},
-		{"Ctrl+O", "Open existing scene"}
+		{"Ctrl+O", "Open existing scene"},
+		{"Shift+A", "Open popup to add item"}
 	};
 };
