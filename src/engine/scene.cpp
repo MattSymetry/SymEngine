@@ -533,7 +533,7 @@ std::string Scene::getShaderCode() {
     //return "#version 460\nlayout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;\nlayout (binding = 0, rgba8) uniform image2D colorBuffer; // frame image\nlayout(set = 0, binding = 2) uniform timeUniform {int myInt;} unscaledTime; // time\nfloat time = float(unscaledTime.myInt) / 40.0;\n\nstruct NodeData {\n    ivec4 data0;//childCount, childStart, operation, sceneID\n    vec4 data1;// operatorGoop, padding[3]\n    mat4 transform;\n    mat4 obejctData;\n    vec4 color;\n};\n\nlayout(std140, binding = 3) buffer ObjectBuffer {\n    NodeData nodes[];\n} SceneNodes;\nlayout(set = 0, binding = 4) buffer selectedIdUniform {\n    int selectedId;\n};\nstruct Camera {\n    vec3 position;\n    vec3 forwards;\n    vec3 right;\n    vec3 up;\n};\n\nstruct SDFData {\n    vec4 data;\n    int id;\n};\n\nlayout(set = 0, binding = 1) uniform UBO {\n    ivec2 mousePos;\n    vec3 camera_position;\n    vec3 camera_target;\n    vec4 viewport;\n    float camera_roll;\n    float camera_fov;\n    int sceneSize;\n    vec4 backgroundColor;\n    vec4 sunPos;\n    float outlineTickness;\n    vec4 outlineCol;\n    int showGrid;\n    int AA;\n} SceneData;\nivec2 gi = ivec2(gl_GlobalInvocationID.xy);\nivec2 screen_pos = ivec2(gi.x + SceneData.viewport.x, gi.y + SceneData.viewport.y);\n\nvoid main()\n{\n    vec4 tot = SceneData.backgroundColor;\n   imageStore(colorBuffer, screen_pos, tot);\n}\n";
     m_shaderCode = m_shaderBegin;
     if (m_sceneSize <= 1) {
-		m_shaderCode += "return vec4(1.0, 0.0, 0.0, 0.0);}";
+		m_shaderCode += "return SDFData(vec4(1.0, 0.0, 0.0, 0.0), -1);}\n";
 		return m_shaderCode;
 	}
     std::vector<std::string> objectsShaders(m_sceneSize);
@@ -542,7 +542,7 @@ std::string Scene::getShaderCode() {
         std::string nodeStr = "SceneNodes.nodes["+ std::to_string(i) +"]";
         if (node.data0.x > 0 && objectsShaders[node.data0.y] != "") { // not empty group
             std::string gName = "g" + std::to_string(i);
-            std::string result = "vec4 "+gName + " = "+ objectsShaders[node.data0.y]+";\n";
+            std::string result = "SDFData "+gName + " = "+ objectsShaders[node.data0.y]+";\n";
             for (int j = 1; j < node.data0.x; ++j) {
                 int childIndex = node.data0.y + j;
                 if (objectsShaders[childIndex] != "") {
@@ -565,19 +565,19 @@ std::string Scene::getShaderCode() {
         else if (node.data0.x == -1) { // object
             std::string pos = "(Rotate(radians(" + nodeStr + ".transform[1].x), radians(" + nodeStr + ".transform[1].y), radians(" + nodeStr + ".transform[1].z)) * (pos- " + nodeStr + ".transform[2].xyz))";
             if (node.object[3].w == 0) { // Sphere
-                objectsShaders[i] = "vec4(sdSphere("+pos+", " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz)";
+                objectsShaders[i] = "SDFData(vec4(sdSphere("+pos+", " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) +")";
             }
             else if (node.object[3].w == 1) { // Box
-                objectsShaders[i] = "vec4(sdRoundBox("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz)";
+                objectsShaders[i] = "SDFData(vec4(sdRoundBox("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
             else if (node.object[3].w == 2) { // Cone
-                objectsShaders[i] = "vec4(sdCone(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz)";
+                objectsShaders[i] = "SDFData(vec4(sdCone(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
 
             }
         }
 	}
     if (objectsShaders[m_sceneSize - 1] == "") {
-        m_shaderCode += "return vec4(1.0, 0.0, 0.0, 0.0);}";
+        m_shaderCode += "return SDFData(vec4(1.0, 0.0, 0.0, 0.0), -1);}\n";
         return m_shaderCode;
     }
     m_shaderCode += "return "+ objectsShaders[m_sceneSize-1] + ";\n}\n\n";

@@ -103,7 +103,7 @@ private:
     bool m_shiftPressed = false;
     int m_tmpNodeIndex = 0;
     int m_deltaTime;
-    std::string m_shaderBegin = "vec4 map(in vec3 pos, bool checkM) {\n";
+    std::string m_shaderBegin = "SDFData map(in vec3 pos) {\n";
     std::string m_shaderCode;
     std::vector<SceneGraphNode*> m_sceneGraphNodes;
     SceneGraphNode m_sceneGraph;
