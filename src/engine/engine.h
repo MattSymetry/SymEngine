@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
+#include "vulkan/vkInit/compute_pipeline.h"
 
 class Engine {
 
@@ -23,10 +24,15 @@ public:
 
 	static std::vector<char> LoadEmbeddedFontResource(int resourceID);
 
+	void recompile_shader();
+
 private:
+	Scene* m_scene;
 	int m_width;
 	int m_height;
 	SDL_Window* m_window;
+	int m_pipelineNumber = 0;
+	std::string m_sceneShaderCode;
 
 	//instance-related variables
 	vk::Instance m_instance{ nullptr };
@@ -45,6 +51,7 @@ private:
 	vk::Extent2D m_swapchainExtent;
 
 	//pipeline-related variables
+	vkInit::ComputePipelineBuilder m_computePipelineBuilder;
 	std::vector<pipelineType> m_pipelineTypes =  {pipelineType::COMPUTE} ;
 	std::unordered_map<pipelineType, vk::PipelineLayout> m_pipelineLayout;
 	std::unordered_map<pipelineType, vk::Pipeline> m_pipeline;

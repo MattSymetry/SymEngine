@@ -12,7 +12,7 @@ struct NodeData {
     vec4 color;
 };
 
-layout(std140, binding = 3) buffer ObjectBuffer {
+layout(set = 0, binding = 3) uniform ObjectBuffer {
     NodeData nodes[];
 } SceneNodes;
 layout(set = 0, binding = 4) buffer selectedIdUniform {
@@ -23,6 +23,11 @@ struct Camera {
     vec3 forwards;
     vec3 right;
     vec3 up;
+};
+
+struct SDFData {
+    vec4 data;
+    int id;
 };
 
 layout(set = 0, binding = 1) uniform UBO {
@@ -47,3 +52,8 @@ float ndot( in vec2 a, in vec2 b ) { return a.x*b.x - a.y*b.y; }
 ivec2 screen_size = imageSize(colorBuffer);
 ivec2 gi = ivec2(gl_GlobalInvocationID.xy);
 ivec2 screen_pos = ivec2(gi.x + SceneData.viewport.x, gi.y + SceneData.viewport.y);
+
+#define RX(X) mat3(1., 0., 0. ,0., cos(X), -sin(X) ,0., sin(X), cos(X))	//x axis rotation matrix
+#define RY(X) mat3(cos(X), 0., sin(X),0., 1., 0.,-sin(X), 0., cos(X))	//y axis rotation matrix	
+#define RZ(X) mat3(cos(X), -sin(X), 0.	,sin(X), cos(X), 0.	,0., 0., 1.)	//z axis rotation matrix
+#define Rotate(X,Y,Z) RZ(Z)*RY(Y)*RX(X)	//x,y,z combined rotation

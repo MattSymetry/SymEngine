@@ -497,6 +497,7 @@ void Editor::getInspector(Scene* scene)
                     BoolOperatios operation = static_cast<BoolOperatios>(currentBoolOperation);
                     node->changeBoolOperation(operation);
                     hasChanges = true;
+                    scene->needsRecompilation = true;
                 }
             }
 
@@ -541,6 +542,7 @@ void Editor::getInspector(Scene* scene)
                     Type newType = NameToTypeMap.find(shapeNames[currentShapeId])->second;
                     shape->setType(newType);
                     hasChanges = true;
+                   scene->needsRecompilation = true;
                 }
 
                 ImGui::Spacing();
@@ -818,7 +820,13 @@ void Editor::MenuBar(Scene* scene)
         }
         if (ImGui::BeginMenu("Render"))
         {
-            // Menu items
+            if (ImGui::Selectable("Get Code"))
+            {
+                ImGui::CloseCurrentPopup();
+                scene->getShaderCode();
+
+            }
+            
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Keybindings"))

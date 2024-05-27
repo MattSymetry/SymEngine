@@ -4,10 +4,10 @@
 #include "vulkan/vkInit/device.h"
 #include "vulkan/vkInit/swapchain.h"
 #include "vulkan/vkInit/pipeline.h"
-#include "vulkan/vkInit/compute_pipeline.h"
 #include "vulkan/vkInit/commands.h"
 #include "vulkan/vkInit/sync.h"
 #include "vulkan/vkInit/descriptors.h"
+#include "glslang/Public/ShaderLang.h"
 
 
 
@@ -16,11 +16,13 @@ Engine::Engine(int width, int height, SDL_Window* window, Scene* scene) {
 	m_width = width;
 	m_height = height;
 	m_window = window;
+	m_scene = scene;
 
 	vkLogging::Logger::get_logger()->print("Making a graphics engine...");
 	vkLogging::Logger::get_logger()->set_debug_mode(false);
 	make_instance();
 	make_device(scene);
+	glslang::InitializeProcess();
 	make_descriptor_set_layouts(scene);
 	make_pipelines();
 	finalize_setup(scene);
@@ -117,15 +119,25 @@ void Engine::make_descriptor_set_layouts(Scene* scene) {
 
 void Engine::make_pipelines() {
 	vkInit::ComputePipelineBuilder computePipelineBuilder(m_device);
+	m_computePipelineBuilder = computePipelineBuilder;
 
-	computePipelineBuilder.specify_compute_shader("/shaders/scene.comp");
-	computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
+	m_computePipelineBuilder.specify_compute_shader(m_scene->getShaderCode().c_str());
+	m_computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
 
-	vkInit::ComputePipelineOutBundle computeOutput = computePipelineBuilder.build();
+	vkInit::ComputePipelineOutBundle computeOutput = m_computePipelineBuilder.build();
 
 	m_pipelineLayout[pipelineType::COMPUTE] = computeOutput.layout;
 	m_pipeline[pipelineType::COMPUTE] = computeOutput.pipeline;
-	computePipelineBuilder.reset();
+	m_computePipelineBuilder.reset();
+
+	m_computePipelineBuilder.specify_compute_shader(m_scene->getShaderCode().c_str());
+	m_computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
+
+	vkInit::ComputePipelineOutBundle computeOutputSecond = m_computePipelineBuilder.build();
+
+	m_pipelineLayout[pipelineType::COMPUTE2] = computeOutputSecond.layout;
+	m_pipeline[pipelineType::COMPUTE2] = computeOutputSecond.pipeline;
+	m_computePipelineBuilder.reset();
 
 	vkInit::PipelineBuilder pipelineBuilder(m_device);
 }
@@ -308,6 +320,8 @@ void Engine::draw_imgui(vk::CommandBuffer cmd, vk::ImageView targetImageView)
 
 void Engine::prepare_frame(uint32_t imageIndex, Scene* scene) {
 
+	if (scene->needsRecompilation) return;
+
 	vkUtil::SwapChainFrame& frame = m_swapchainFrames[imageIndex];
 
 	for (auto& bufferSetup : frame.bufferSetups) {
@@ -353,11 +367,44 @@ void Engine::prepare_to_trace_barrier(vk::CommandBuffer commandBuffer, vk::Image
 	commandBuffer.pipelineBarrier(sourceStage, destinationStage, vk::DependencyFlags(), nullptr, nullptr, barrier);
 }
 
+void Engine::recompile_shader()
+{
+	if (m_pipelineNumber == 0) {
+		m_computePipelineBuilder.specify_compute_shader(m_scene->getShaderCode().c_str());
+		m_computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
+
+		vkInit::ComputePipelineOutBundle computeOutputSecond = m_computePipelineBuilder.build();
+
+		m_pipelineLayout[pipelineType::COMPUTE2] = computeOutputSecond.layout;
+		m_pipeline[pipelineType::COMPUTE2] = computeOutputSecond.pipeline;
+		m_computePipelineBuilder.reset();
+		m_pipelineNumber = 1;
+	}
+	else {
+		m_computePipelineBuilder.specify_compute_shader(m_scene->getShaderCode().c_str());
+		m_computePipelineBuilder.add_descriptor_set_layout(m_frameSetLayout[pipelineType::COMPUTE]);
+
+		vkInit::ComputePipelineOutBundle computeOutput = m_computePipelineBuilder.build();
+
+		m_pipelineLayout[pipelineType::COMPUTE] = computeOutput.layout;
+		m_pipeline[pipelineType::COMPUTE] = computeOutput.pipeline;
+		m_computePipelineBuilder.reset();
+		m_pipelineNumber = 0;
+	}
+	m_scene->needsRecompilation = false;
+}
+
 void Engine::dispatch_compute(vk::CommandBuffer commandBuffer, uint32_t imageIndex, glm::vec4 viewport) {
 
-	commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[pipelineType::COMPUTE]);
+	if (m_pipelineNumber == 0) {
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[pipelineType::COMPUTE]);
+		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipelineLayout[pipelineType::COMPUTE], 0, m_swapchainFrames[imageIndex].descriptorSet[pipelineType::COMPUTE], nullptr);
+	}
+	else {
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_pipeline[pipelineType::COMPUTE2]);
+		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipelineLayout[pipelineType::COMPUTE2], 0, m_swapchainFrames[imageIndex].descriptorSet[pipelineType::COMPUTE], nullptr);
+	}
 
-	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_pipelineLayout[pipelineType::COMPUTE], 0, m_swapchainFrames[imageIndex].descriptorSet[pipelineType::COMPUTE], nullptr);
 
 	commandBuffer.dispatch(static_cast<uint32_t>((viewport.z + 7) / 8), static_cast<uint32_t>((viewport.w + 7) / 8), 1);
 
@@ -586,7 +633,7 @@ std::vector<char> Engine::LoadEmbeddedFontResource(int resourceID) {
 }
 
 Engine::~Engine() {
-
+	glslang::FinalizeProcess();
 	m_device.waitIdle();
 
 	vkLogging::Logger::get_logger()->print("Goodbye see you!");

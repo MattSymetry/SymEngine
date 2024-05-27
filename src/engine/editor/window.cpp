@@ -223,6 +223,9 @@ void Window::run() {
         
         _engine->render(_scene);
         _scene->Update(_deltaTime);
+        if (_scene->needsRecompilation) {
+			_engine->recompile_shader();
+		}
         calcFramerate();
         SDL_Delay(1);
     }

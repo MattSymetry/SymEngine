@@ -76,6 +76,6 @@ vec4 test(in vec3 pos) {
 vec4 map(in vec3 pos, bool checkM) {
     NodeData node = SceneNodes.nodes[0];
     
-    //return test(pos);
-    return calcGroup(pos, 0, checkM);
+    return test(pos);
+    //return calcGroup(pos, 0, checkM);
 }

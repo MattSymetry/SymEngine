@@ -11,7 +11,7 @@ namespace vkUtil {
     std::vector<char> prepareShader();
     std::vector<char> endShader();
 
-	vk::ShaderModule createModule(std::string filename, vk::Device device);
+	vk::ShaderModule createModule(std::string shaderCode, vk::Device device);
     std::string getExecutablePath();
     std::string getExecutableDirectory();
 }

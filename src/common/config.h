@@ -30,7 +30,8 @@
 //--------- Assets -------------//
 
 enum class pipelineType {
-    COMPUTE
+    COMPUTE,
+    COMPUTE2
 };
 
 // String Processing functions

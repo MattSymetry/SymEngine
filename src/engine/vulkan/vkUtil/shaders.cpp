@@ -1,3 +1,4 @@
+#pragma once
 #include "shaders.h"
 #include "../../logging.h"
 #include "glslang/Public/ShaderLang.h"
@@ -184,30 +185,24 @@ std::vector<char> vkUtil::readFile(std::string filename) {
 	file.read(buffer.data(), filesize);
 
 	file.close();
-	return buffer;
+	return buffer; 
 }
 
 std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shaderSource, const std::string& inputFilename, glslang_stage_t shaderStage) {
-    glslang::InitializeProcess();
     std::vector<uint32_t> resultingSpirv;
-
     const char* shaderCode = shaderSource.c_str();
-
     static const auto defaultResources = get_default_resource();
 
     glslang_input_t input = {};
     input.language = GLSLANG_SOURCE_GLSL;
     input.stage = shaderStage;
     input.client = GLSLANG_CLIENT_VULKAN;
-    // Looks like Vulkan 1.1 is fine even though we're linking against a Vulkan 1.2 SDK:
     input.client_version = GLSLANG_TARGET_VULKAN_1_3;
     input.target_language = GLSLANG_TARGET_SPV;
-    // SPIR-V 1.5 has been released on September 13th, 2019 to accompany the launch of Vulkan 1.2
-    // However, Vulkan 1.1 requires Spir-V 1.3, go with 1.3 to match the Vulkan 1.1 target above:
     input.target_language_version = GLSLANG_TARGET_SPV_1_3;
     input.code = shaderCode;
     input.default_version = 100;
-    input.default_profile = GLSLANG_NO_PROFILE;
+    input.default_profile = GLSLANG_ES_PROFILE;
     input.force_default_version_and_profile = false;
     input.forward_compatible = false;
     input.messages = GLSLANG_MSG_DEFAULT_BIT;
@@ -257,7 +252,6 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
 
     glslang_program_delete(program);
     glslang_shader_delete(shader);
-    glslang::FinalizeProcess();
     return resultingSpirv;
 } 
 
@@ -277,23 +271,20 @@ std::vector<char> vkUtil::endShader() {
     return shader;
 }
 
-vk::ShaderModule vkUtil::createModule(std::string filename, vk::Device device) {
+vk::ShaderModule vkUtil::createModule(std::string shaderCode, vk::Device device) {
 
     vk::ShaderModuleCreateInfo moduleInfo = {};
     moduleInfo.flags = vk::ShaderModuleCreateFlags();
     std::vector<char> sourceCode = prepareShader();
-    auto tmp = readFile(filename);
+    std::vector<char> tmp(shaderCode.begin(), shaderCode.end());
     sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
     tmp = endShader();
     sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
     
     std::string str(sourceCode.begin(), sourceCode.end());
-    //std::cout << "Shader source: " << str << std::endl; 
-    auto sourceCodeUnit = compileShaderSourceToSpirv(str, filename, GLSLANG_STAGE_COMPUTE);
+    auto sourceCodeUnit = compileShaderSourceToSpirv(str, "GenCode", GLSLANG_STAGE_COMPUTE);
     moduleInfo.codeSize = sourceCodeUnit.size() * sizeof(decltype(sourceCodeUnit)::value_type);
     moduleInfo.pCode = reinterpret_cast<const uint32_t*>(sourceCodeUnit.data());
-    std::cout << "Compiled shader: " << sourceCodeUnit.data() << std::endl;
-    std::cout << "Compiled shader size: " << moduleInfo.codeSize << std::endl;
 
 	try {
 		auto shaderMod = device.createShaderModule(moduleInfo);
@@ -301,7 +292,7 @@ vk::ShaderModule vkUtil::createModule(std::string filename, vk::Device device) {
 	}
 	catch (vk::SystemError err) {
 		std::stringstream message;
-		message << "Failed to create shader module for \"" << filename << "\"";
+		message << "Failed to create shader module for \"" << "GenCode" << "\"";
 		vkLogging::Logger::get_logger()->print(message.str());
 	}
 }

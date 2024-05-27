@@ -18,7 +18,8 @@ namespace vkInit {
 	class ComputePipelineBuilder {
 
 	public:
-
+		ComputePipelineBuilder() {
+			m_device = nullptr;}
 		ComputePipelineBuilder(vk::Device device);
 		~ComputePipelineBuilder();
 

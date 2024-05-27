@@ -26,6 +26,7 @@ struct SceneDescription {
 class Scene {
 
 public:
+    static const int m_maxObjects = 200;
     Scene(glm::vec4 viewport);
     
     std::vector<BufferInitParams> buffers;
@@ -55,7 +56,7 @@ public:
     SceneGraphNode* GetSceneGraphNode(int id);
     SceneGraphNode* GetSelectedNode();
     void updateNodeData(bool saveHistrory = true);
-    std::array<NodeData, 50> GetNodeData() { return m_nodeData; }
+    std::array<NodeData, m_maxObjects> GetNodeData() { return m_nodeData; }
     Camera m_camera;
     void setCameraPosition(glm::vec3 pos) { m_camera.setPosition(pos); description.camera_position = pos; }
     glm::vec4 getBackgroundColor() { return m_backgroundColor; }
@@ -91,6 +92,8 @@ public:
     void endAction();
     SceneData CreateSnapshot(bool saveToHistory = true);
     void newScene();
+    std::string getShaderCode();
+    bool needsRecompilation = false;
 private:
     std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
@@ -100,6 +103,8 @@ private:
     bool m_shiftPressed = false;
     int m_tmpNodeIndex = 0;
     int m_deltaTime;
+    std::string m_shaderBegin = "vec4 map(in vec3 pos, bool checkM) {\n";
+    std::string m_shaderCode;
     std::vector<SceneGraphNode*> m_sceneGraphNodes;
     SceneGraphNode m_sceneGraph;
     SceneGraphNode m_copyNode;
@@ -108,7 +113,6 @@ private:
     int m_sceneSize = 0;
     int m_showGrid = 1;
     int m_AA = 1;
-    static const int m_maxObjects = 50;
     std::array<NodeData, m_maxObjects> m_nodeData;
     void SerializeNode(SceneGraphNode* node);
     void AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::DescriptorType descriptorType, void* dataPtr, bool hostVisible = false);

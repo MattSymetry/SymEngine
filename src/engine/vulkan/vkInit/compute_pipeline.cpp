@@ -33,7 +33,7 @@ void vkInit::ComputePipelineBuilder::specify_compute_shader(const char* filename
 
 	if (m_computeShader) {
         m_device.destroyShaderModule(m_computeShader);
-        m_computeShader = nullptr; 
+        m_computeShader = nullptr;
 	}
 
 	vkLogging::Logger::get_logger()->print("Create compute shader module");
