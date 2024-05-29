@@ -442,15 +442,15 @@ void Editor::getInspector(Scene* scene)
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text(ICON_LC_AXIS_3D " Position");
                     ImGui::PopFont();
-                    if (drawFloat3("Position"+node->getId(), position, 0.01f, 0.0f, 0.0f)) {
-                        transform->setPosition(position);
+                    if (drawFloat3("Position" + std::to_string(node->getId()), position, 0.01f, 0.0f, 0.0f)) {
+                        transform->setPosition(position); 
                         hasChanges = true;
                     }
 
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text(ICON_LC_ROTATE_3D " Rotation");
                     ImGui::PopFont();
-                    if (drawFloat3("Rotation" + node->getId(), rotation, 0.5f, 0.0f, 0.0f)) {
+                    if (drawFloat3("Rotation" + std::to_string(node->getId()), rotation, 0.5f, 0.0f, 0.0f)) {
                         transform->setRotation(rotation);
                         hasChanges = true;
                     }
@@ -462,7 +462,7 @@ void Editor::getInspector(Scene* scene)
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text(ICON_LC_AXIS_3D " Position");
                     ImGui::PopFont();
-                    if (drawFloat3("GPosition" + node->getId(), position, 0.01f, 0.0f, 0.0f)) {
+                    if (drawFloat3("GPosition" + std::to_string(node->getId()), position, 0.01f, 0.0f, 0.0f)) {
                         transform->setWorldPosition(position);
                         hasChanges = true;
                     }
@@ -470,7 +470,7 @@ void Editor::getInspector(Scene* scene)
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text(ICON_LC_ROTATE_3D " Rotation");
                     ImGui::PopFont();
-                    if (drawFloat3("GRotation" + node->getId(), rotation, 0.5f, 0.0f, 0.0f)) {
+                    if (drawFloat3("GRotation" + std::to_string(node->getId()), rotation, 0.5f, 0.0f, 0.0f)) {
                         transform->setWorldRotation(rotation);
                         hasChanges = true;
                     }
@@ -567,7 +567,7 @@ void Editor::getInspector(Scene* scene)
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                     ImGui::Text("Size");
                     ImGui::PopFont();
-                    if (drawFloat3("Size" + node->getId(), box.size, 0.01f, 0.001f, 100.0f)) {
+                    if (drawFloat3("Size" + std::to_string(node->getId()), box.size, 0.01f, 0.001f, 100.0f)) {
                         if (box.size.x < 0.01f) { box.size.x = 0.01f; }
                         if (box.size.y < 0.01f) { box.size.y = 0.01f; }
                         if (box.size.z < 0.01f) { box.size.z = 0.01f; }
