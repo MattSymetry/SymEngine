@@ -319,19 +319,17 @@ void Scene::Update(int deltaTime) {
             if (!node->isGroup()) {
                 data->object = node->getObject()->getData();
             }
-            data->data0.z = node->getBoolOperation();
+            //data->data0.z = node->getBoolOperation();
             data->data1.x = node->getGoop(); 
             data->color = node->getColor();
 		}
 	}
 }
  
-void Scene::UpdateViewport(glm::vec4 viewport) {
+void Scene::UpdateViewport(glm::vec4 viewport, float aspectRatio) {
 	m_viewport = viewport;
 	description.viewport = viewport;
-    if (viewport.z > 0.0f && viewport.w > 0.0f) {
-		m_camera.setAspectRatio(viewport.z / viewport.w);
-	}
+	m_camera.setAspectRatio(aspectRatio);
 }
 
 void Scene::updateNodeData(bool saveHistory) {
@@ -530,7 +528,6 @@ void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
 }
 
 std::string Scene::getShaderCode() {
-    //return "#version 460\nlayout (local_size_x = 8, local_size_y = 8, local_size_z = 1) in;\nlayout (binding = 0, rgba8) uniform image2D colorBuffer; // frame image\nlayout(set = 0, binding = 2) uniform timeUniform {int myInt;} unscaledTime; // time\nfloat time = float(unscaledTime.myInt) / 40.0;\n\nstruct NodeData {\n    ivec4 data0;//childCount, childStart, operation, sceneID\n    vec4 data1;// operatorGoop, padding[3]\n    mat4 transform;\n    mat4 obejctData;\n    vec4 color;\n};\n\nlayout(std140, binding = 3) buffer ObjectBuffer {\n    NodeData nodes[];\n} SceneNodes;\nlayout(set = 0, binding = 4) buffer selectedIdUniform {\n    int selectedId;\n};\nstruct Camera {\n    vec3 position;\n    vec3 forwards;\n    vec3 right;\n    vec3 up;\n};\n\nstruct SDFData {\n    vec4 data;\n    int id;\n};\n\nlayout(set = 0, binding = 1) uniform UBO {\n    ivec2 mousePos;\n    vec3 camera_position;\n    vec3 camera_target;\n    vec4 viewport;\n    float camera_roll;\n    float camera_fov;\n    int sceneSize;\n    vec4 backgroundColor;\n    vec4 sunPos;\n    float outlineTickness;\n    vec4 outlineCol;\n    int showGrid;\n    int AA;\n} SceneData;\nivec2 gi = ivec2(gl_GlobalInvocationID.xy);\nivec2 screen_pos = ivec2(gi.x + SceneData.viewport.x, gi.y + SceneData.viewport.y);\n\nvoid main()\n{\n    vec4 tot = SceneData.backgroundColor;\n   imageStore(colorBuffer, screen_pos, tot);\n}\n";
     m_shaderCode = m_shaderBegin;
     if (m_sceneSize <= 1) {
 		m_shaderCode += "return SDFData(vec4(1.0, 0.0, 0.0, 0.0), -1);}\n";

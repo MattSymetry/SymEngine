@@ -56,4 +56,4 @@ ivec2 screen_pos = ivec2(gi.x + SceneData.viewport.x, gi.y + SceneData.viewport.
 #define RX(X) mat3(1., 0., 0. ,0., cos(X), -sin(X) ,0., sin(X), cos(X))	//x axis rotation matrix
 #define RY(X) mat3(cos(X), 0., sin(X),0., 1., 0.,-sin(X), 0., cos(X))	//y axis rotation matrix	
 #define RZ(X) mat3(cos(X), -sin(X), 0.	,sin(X), cos(X), 0.	,0., 0., 1.)	//z axis rotation matrix
-#define Rotate(X,Y,Z) RZ(Z)*RY(Y)*RX(X)	//x,y,z combined rotation
+#define Rotate(X,Y,Z) RX(X)*RY(Y)*RZ(Z)	//x,y,z combined rotation

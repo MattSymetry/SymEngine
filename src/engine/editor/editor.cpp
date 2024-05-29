@@ -913,6 +913,7 @@ void Editor::Gizmo(Scene* scene)
     ImGuizmo::SetRect(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y, windowWidth, windowHeight);
 
     if (scene->GetSelectedId() != 0) { 
+        ImGuizmo::MODE mode = (m_transformMode == 0) ? ImGuizmo::MODE::LOCAL : ImGuizmo::MODE::WORLD;
         glm::mat4 trans = scene->GetSelectedNode()->getTransform()->getWorldTransform();
         glm::vec3 position = trans[2];
         glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
@@ -922,7 +923,7 @@ void Editor::Gizmo(Scene* scene)
         float translation[3], rotation[3], scale[3];
         ImGuizmo::RecomposeMatrixFromComponents(&position.x, &trans[1].x, &trans[0].x, tmpPos);
         ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
-            ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, tmpPos);
+            ImGuizmo::OPERATION::TRANSLATE, mode, tmpPos);
         ImGuizmo::DecomposeMatrixToComponents(tmpPos, translation, rotation, scale);
         glm::vec3 p = glm::vec3(translation[0], translation[1], translation[2]);
         if (p != position) {
@@ -931,16 +932,16 @@ void Editor::Gizmo(Scene* scene)
         }
         
         float tmp[16];
-        glm::vec3 rot = glm::vec3(0.0f);
+        glm::vec3 rot = trans[1];
         ImGuizmo::RecomposeMatrixFromComponents(&position.x, &rot.x, &trans[0].x, tmp);
         ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
-            ImGuizmo::OPERATION::ROTATE, ImGuizmo::MODE::WORLD, tmp);
+            ImGuizmo::OPERATION::ROTATE, mode, tmp); 
         ImGuizmo::DecomposeMatrixToComponents(tmp, translation, rotation, scale);
         glm::vec3 r = glm::vec3(rotation[0], rotation[1], rotation[2]);
         if (r != rot) {
-            scene->GetSelectedNode()->getTransform()->rotate(r);
-			scene->performAction(scene->CreateSnapshot(false));
-		}
+            scene->GetSelectedNode()->getTransform()->setWorldRotation(r);
+                scene->performAction(scene->CreateSnapshot(false));
+        }
     }
     ImGui::End();
 }

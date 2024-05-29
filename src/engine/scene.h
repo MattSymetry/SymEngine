@@ -44,7 +44,7 @@ public:
     void MouseInput(int x, int y);
     void WheelPressed(int x, int y);
     void MouseScroll(int y);
-    void UpdateViewport(glm::vec4 viewport);
+    void UpdateViewport(glm::vec4 viewport, float aspectRatio);
 
     void RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes = true);
     void AddEmpty(SceneGraphNode* parent = nullptr, bool isObject = false, Type shape = Type::Sphere);

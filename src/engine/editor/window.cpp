@@ -163,7 +163,6 @@ void Window::run() {
             {
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED)
                 {
-                    cout << "Window resized" << endl;
                     _width = e.window.data1;
                     _height = e.window.data2;
                     ImGuiIO& io = ImGui::GetIO();
@@ -208,10 +207,9 @@ void Window::run() {
         _editor->Gizmo(_scene);
         _editor->SettingsPanel(_scene);
         _editor->MenuBar(_scene);
-        if (_scene->m_viewport != viewp) 
-        {
-			_scene->UpdateViewport(viewp);
-		}
+
+		_scene->UpdateViewport(viewp, float(_width) / float(_height)); 
+
 
         if (openAddPanel) {
 			_editor->openAddPanel(ImGui::GetCurrentContext(), _scene);

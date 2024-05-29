@@ -15,7 +15,7 @@ Camera::Camera(glm::vec3 position, glm::vec3 target, float roll, float fov, floa
 	m_scrollSpeed = 20.0f;
 	m_aspectRatio = aspectRatio;
 	updateViewMatrix();
-	updateProjectionMatrix(aspectRatio);
+	updateProjectionMatrix();
 }
 
 Camera::~Camera() {
@@ -59,7 +59,7 @@ void Camera::Move(glm::vec3 dir, float deltaTime, bool moveTarget) {
 	m_position += dir * m_speed * deltaTime;
 	if (moveTarget) m_target += dir * m_speed * deltaTime;
 	updateViewMatrix();
-	updateProjectionMatrix(16.0f / 9.0f);
+	updateProjectionMatrix();
 }
 
 void Camera::Orbit(glm::vec2 dir, float deltaTime) {
@@ -85,7 +85,7 @@ void Camera::Orbit(glm::vec2 dir, float deltaTime) {
 	// Update camera position
 	m_position = m_target + direction;
 	updateViewMatrix();
-	updateProjectionMatrix(16.0f / 9.0f);
+	updateProjectionMatrix();
 }
 
 void Camera::RollLeft(float deltaTime) {
@@ -136,8 +136,8 @@ glm::mat4 Camera::getViewMatrix() {
 	return viewMatrix;
 }
 
-void Camera::updateProjectionMatrix(float aspectRatio) {
-	projectionMatrix = glm::perspective(glm::radians(m_fov), aspectRatio, 0.1f, 1000.0f);
+void Camera::updateProjectionMatrix() {
+	projectionMatrix = glm::perspective(glm::radians(m_fov), m_aspectRatio, 0.1f, 1000.0f);
 }
 
 glm::mat4 Camera::getProjectionMatrix() {
@@ -146,7 +146,7 @@ glm::mat4 Camera::getProjectionMatrix() {
 
 void Camera::setAspectRatio(float aspectRatio) {
 	m_aspectRatio = aspectRatio;
-	updateProjectionMatrix(aspectRatio);
+	updateProjectionMatrix();
 }
 
 float Camera::getAspectRatio() {

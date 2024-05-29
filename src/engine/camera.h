@@ -38,7 +38,7 @@ public:
 	void setScrollSpeed(float scrollSpeed);
 	void updateViewMatrix();
 	glm::mat4 getViewMatrix();
-	void updateProjectionMatrix(float aspectRatio);
+	void updateProjectionMatrix();
 	glm::mat4 getProjectionMatrix();
 	void setAspectRatio(float aspectRatio);
 	float getAspectRatio();
