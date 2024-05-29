@@ -23,7 +23,7 @@ enum BoolOperatios {
 
 struct NodeData {
 	glm::ivec4 data0;//childCount, childStart, operation, sceneID
-	glm::vec4 data1;// operatorGoop,padding[3]
+	glm::vec4 data1;// operatorGoop,colorGoop, padding[2]
 	glm::mat4 transform; 
 	glm::mat4 object;
 	glm::vec4 color;
@@ -58,6 +58,7 @@ private:
 	std::string m_name;
 	glm::vec4 m_color;
 	float m_goop;
+	float m_colorGoop;
 	void copyFrom(const SceneGraphNode& other) {
 		m_data = other.m_data;
 		m_parent = other.m_parent;
@@ -82,6 +83,7 @@ private:
 		m_name = other.m_name;
 		m_color = other.m_color;
 		m_goop = other.m_goop;
+		m_colorGoop = other.m_colorGoop;
 		// children
 		for (SceneGraphNode* child : other.m_children) {
 			SceneGraphNode* newChild = new SceneGraphNode();
@@ -131,6 +133,8 @@ public:
 	void addChildAfter(SceneGraphNode* child, SceneGraphNode* moveBehindNode);
 	void setGoop(float goop) { m_goop = goop; m_data.data1.x = goop; }
 	float getGoop() { return m_goop; }
+	void setColorGoop(float colorGoop) { m_colorGoop = colorGoop; m_data.data1.y = colorGoop; }
+	float getColorGoop() { return m_colorGoop; }
 	void setData(const NodeData data);
 	void setId(int id) { m_id = id; m_data.data0.w = id; }
 };

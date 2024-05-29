@@ -480,16 +480,6 @@ void Editor::getInspector(Scene* scene)
                 ImGui::Separator();
                 ImGui::Spacing();
 
-                float goop = node->getGoop();
-                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                ImGui::Text(ICON_LC_SQUIRCLE " Smoothing");
-                ImGui::PopFont();
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 10000.0f, "%.3f")) {
-                    node->setGoop(goop);
-                    hasChanges = true;
-                }
-
                 int currentBoolOperation = node->getBoolOperation();
                 char* BoolOperationsNames[] = { ICON_LC_SQUARE_PLUS " Union", ICON_LC_SQUARE_SLASH " Intersection", ICON_LC_SQUARE_MINUS " Difference" };
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -499,6 +489,31 @@ void Editor::getInspector(Scene* scene)
                     hasChanges = true;
                     scene->needsRecompilation = true;
                 }
+
+                ImGui::Spacing();
+
+                float goop = node->getGoop();
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text(ICON_LC_SQUIRCLE " Smoothing");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat("##Smoothing", &goop, 0.01f, 0.00f, 100.0f, "%.3f")) {
+                    node->setGoop(goop);
+                    hasChanges = true;
+                }
+
+                ImGui::Spacing();
+
+                float colorGoop = node->getColorGoop();
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text(ICON_LC_PALETTE " Color Smoothing");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DragFloat("##Color Smoothing", &colorGoop, 0.01f, 0.00f, 10.0f, "%.3f")) {
+					node->setColorGoop(colorGoop);
+					hasChanges = true;
+				}
+
             }
 
             if (!node->isGroup())

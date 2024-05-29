@@ -258,6 +258,7 @@ SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* paren
 		newNode->setParent(parent);
 		newNode->changeBoolOperation(node->getBoolOperation());
 		newNode->setGoop(node->getGoop());
+        newNode->setColorGoop(node->getColorGoop());
 		newNode->setColor(node->getColor());
 		newNode->getTransform()->setPosition(node->getTransform()->getPosition());
 		newNode->getTransform()->setRotation(node->getTransform()->getRotation());
@@ -320,7 +321,8 @@ void Scene::Update(int deltaTime) {
                 data->object = node->getObject()->getData();
             }
             //data->data0.z = node->getBoolOperation();
-            data->data1.x = node->getGoop(); 
+            data->data1.x = node->getGoop();
+            data->data1.y = node->getColorGoop();
             data->color = node->getColor();
 		}
 	}
@@ -384,6 +386,7 @@ void Scene::SerializeNode(SceneGraphNode* root) {
                 serializedNode.data0.x = (node->isGroup()) ? node->getChildren().size() : -1;
                 serializedNode.data0.w = node->getId();
                 serializedNode.data1.x = node->getGoop();
+                serializedNode.data1.y = node->getColorGoop();
                 serializedNode.color = node->getColor();
 
                 if (!node->isGroup()) {
@@ -545,13 +548,13 @@ std::string Scene::getShaderCode() {
                 if (objectsShaders[childIndex] != "") {
                     switch (m_nodeData[childIndex].data0.z) {
 					    case Union:
-						    result += gName + " = opU("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x);\n";
+						    result += gName + " = opU("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
 						    break;
 					    case Intersection:
-						    result += gName + " = opI("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x);\n";
+						    result += gName + " = opI("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
 						    break;
 					    case Difference:
-						    result += gName + " = opS("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x);\n";
+						    result += gName + " = opS("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
 						    break;
 				    }
                 }

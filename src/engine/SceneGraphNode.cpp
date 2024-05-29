@@ -11,6 +11,7 @@ SceneGraphNode::SceneGraphNode(int id, bool hasObject, SceneGraphNode* parent, s
 	}
 	m_color = glm::vec4(1.0f);
 	m_goop = 0.1f;
+	m_colorGoop = 0.1f;
 }
 
 void SceneGraphNode::addChild(SceneGraphNode* child) {
@@ -86,6 +87,7 @@ NodeData* SceneGraphNode::getData() {
 	m_data.data0.z = m_parent ? m_parent->getBoolOperation() : -1;
 	m_data.data0.w = m_id;
 	m_data.data1.x = m_goop;
+	m_data.data1.y = m_colorGoop;
 	m_data.color = m_color;
 	m_data.transform = m_transform.getWorldTransform();
 	if (m_hasObject) {
@@ -102,6 +104,7 @@ void SceneGraphNode::setData(const NodeData data) {
 	m_data = data;
 	m_boolOperation = static_cast<BoolOperatios>(data.data0.z);
 	m_goop = data.data1.x;
+	m_colorGoop = data.data1.y;
 	m_color = data.color;
 	m_hasObject = data.data0.x <= 0;// TODO group in group
 	m_isGroup = !m_hasObject;

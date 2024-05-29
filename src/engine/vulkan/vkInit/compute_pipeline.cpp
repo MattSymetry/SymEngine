@@ -37,7 +37,7 @@ void vkInit::ComputePipelineBuilder::specify_compute_shader(const char* filename
 	}
 
 	vkLogging::Logger::get_logger()->print("Create compute shader module");
-    m_computeShader = vkUtil::createModule(filename, m_device); 
+    m_computeShader = vkUtil::createModule(filename, m_device);
     m_computeShaderInfo = make_shader_info(m_computeShader, vk::ShaderStageFlagBits::eCompute);
 }
 

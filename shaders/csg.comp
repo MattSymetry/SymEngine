@@ -17,33 +17,40 @@ vec3 smin( float aa, float bb, vec3 a, vec3 b, float k )
 
 float sminCol( float a, float b, float k )
 {
-    float h = max( k-abs(a-b), 0.0 )/k;
-    float m = h*h*h*0.5;
-    return (a<b) ? m : 1.0-m;
+    if (k > 0.0) {
+        float h = max( k-abs(a-b), 0.0 )/k;
+        float m = h*h*h*0.5;
+        return (a<b) ? m : 1.0-m;
+    }
+    return (a<b) ? 0.0 : 1.0;
 }
 
-SDFData opU( SDFData d1, SDFData d2, float s )
+SDFData opU( SDFData d1, SDFData d2, float s, float k )
 {
-    vec4 tmp = vec4(smin(d1.data.x, d2.data.x, s), mix(d1.data.yzw, d2.data.yzw, sminCol(d1.data.x, d2.data.x, s)));
-    SDFData res = SDFData(tmp, minData(d1.data.x, d2.data.x, d1.id, d2.id));
-    return res;
+    if (s > 0.0) {
+        vec4 tmp = vec4(smin(d1.data.x, d2.data.x, s), mix(d1.data.yzw, d2.data.yzw, sminCol(d1.data.x, d2.data.x, k)));
+        SDFData res = SDFData(tmp, minData(d1.data.x, d2.data.x, d1.id, d2.id));
+        return res;
+    }
+
+    return (d1.data.x<d2.data.x) ? d1 : d2;
 }
 
-SDFData opS( SDFData d1, SDFData d2, float s )
+SDFData opS( SDFData d1, SDFData d2, float s, float k )
 {
     d2.data.x = -d2.data.x;
-    SDFData res = opU(d1,d2,s);
+    SDFData res = opU(d1,d2,s,k);
     res.data.x *= -1.0;
     res = SDFData(res.data, minData(d1.data.x, d2.data.x, d1.id, d2.id));
     return res;
 }
 
-SDFData opI( SDFData d1, SDFData d2, float s )
+SDFData opI( SDFData d1, SDFData d2, float s, float k )
 {
     float a = d1.data.x;
     float b = d2.data.x;
     vec2 u = max(vec2(s + a,s + b), vec2(0));
-    SDFData res = SDFData(vec4(max(a,b), mix(d1.data.yzw, d2.data.yzw, sminCol(d1.data.x, d2.data.x, s))), minData(d1.data.x, d2.data.x, d1.id, d2.id));
+    SDFData res = SDFData(vec4(max(a,b), mix(d1.data.yzw, d2.data.yzw, sminCol(d1.data.x, d2.data.x, k))), minData(d1.data.x, d2.data.x, d1.id, d2.id));
 	return res;
 }
 
