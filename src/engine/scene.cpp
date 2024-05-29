@@ -84,9 +84,11 @@ void Scene::MousePos(int x, int y) {
 }
 
 void Scene::CtrD() {
+    if (m_sceneSize >= m_maxObjects) { return; }
 	SceneGraphNode* node = GetSelectedNode();
     if (node && node->getId() > 0) {
         SceneGraphNode* newNode = DuplicateNode(node, node->getParent());
+        if (newNode == nullptr) {return;}
         insertNodeAfter(newNode, node);
         SetSelectedId(newNode->getId());
 	}
@@ -100,9 +102,11 @@ void Scene::CtrC() {
 }
 
 void Scene::CtrV() {
+    if (m_sceneSize >= m_maxObjects) { return; }
     if (m_copyNode.getId() == 9999) {
         SceneGraphNode* afterNode = GetSelectedNode();
 		SceneGraphNode* newNode = DuplicateNode(&m_copyNode, m_copyNode.getParent());
+        if (newNode == nullptr) { return; }
         if (afterNode && afterNode->getId() > 0) {
             insertNodeAfter(newNode, afterNode);
             if (afterNode->isGroup()) {
@@ -255,6 +259,7 @@ SceneData Scene::CreateSnapshot(bool saveToHistory) {
 SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* parent) {
     if (node) {
 		SceneGraphNode* newNode = AddSceneGraphNode(node->getName() + " Copy");
+        if (newNode == nullptr) {return nullptr;}
 		newNode->setParent(parent);
 		newNode->changeBoolOperation(node->getBoolOperation());
 		newNode->setGoop(node->getGoop());
@@ -419,6 +424,7 @@ void Scene::SerializeNode(SceneGraphNode* root) {
 
 void Scene::AddEmpty(SceneGraphNode* parent, bool isObject, Type shapeType) {
     SceneGraphNode* node = AddSceneGraphNode((isObject ? "Object" : "Group"));
+    if (node == nullptr) {return;}
     if (parent) {
         while (!parent->isGroup()) {
 			parent = parent->getParent();
@@ -433,18 +439,6 @@ void Scene::AddEmpty(SceneGraphNode* parent, bool isObject, Type shapeType) {
         obj->addComponent(new Shape(Shape::createShape(shapeType)));
         node->addObject(std::unique_ptr<GameObject>(obj));
 	}
-    updateNodeData();
-}
-
-void Scene::AddSphere(glm::vec3 position, float radius, glm::vec3 color) {
-	auto mygameObject = std::make_unique<GameObject>();
-	mygameObject->getComponent<Transform>()->setPosition(position);
-	Sphere sphereShape;
-	sphereShape.radius = radius;
-	mygameObject->addComponent(new Shape(sphereShape));
-	
-    SceneGraphNode* node = AddSceneGraphNode("Sphere");
-    node->addObject(std::move(mygameObject));
     updateNodeData();
 }
 

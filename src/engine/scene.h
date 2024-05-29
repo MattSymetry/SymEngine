@@ -26,7 +26,7 @@ struct SceneDescription {
 class Scene {
 
 public:
-    static const int m_maxObjects = 200;
+    static const int m_maxObjects = 101;
     Scene(glm::vec4 viewport);
     
     std::vector<BufferInitParams> buffers;
@@ -48,7 +48,6 @@ public:
 
     void RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes = true);
     void AddEmpty(SceneGraphNode* parent = nullptr, bool isObject = false, Type shape = Type::Sphere);
-    void AddSphere(glm::vec3 position, float radius, glm::vec3 color);
 
     SceneGraphNode* GetSceneGraph() { return &m_sceneGraph; }
     int GetSelectedId() { return m_selectedObjectId; }
@@ -94,6 +93,7 @@ public:
     void newScene();
     std::string getShaderCode();
     bool needsRecompilation = false;
+    int getSceneSize() { return m_sceneSize; }
 private:
     std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);

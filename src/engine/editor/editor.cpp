@@ -166,6 +166,14 @@ void Editor::getScene(Scene* scene)
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
+
+        ImGui::BeginDisabled();
+        std::string objectsCounter = std::to_string(scene->getSceneSize()-1) + " / " + std::to_string(scene->m_maxObjects-1) + std::string(" objects");
+        ImGui::Button(objectsCounter.c_str(), ImVec2(avail,0));
+        ImGui::EndDisabled();
+
+        ImGui::Spacing();
+
         SceneGraphNode* sceneGraph = scene->GetSceneGraph();
         DrawSceneGraphNode(sceneGraph, true, false, scene);
         if (ImGui::IsMouseReleased(0))
@@ -1012,7 +1020,7 @@ void  Editor::setTheme()
     ImGuiStyle& style = ImGui::GetStyle();
 
     style.Alpha = 1.0f;
-    style.DisabledAlpha = 0.1000000014901161f;
+    style.DisabledAlpha = 0.5000000014901161f;
     style.WindowPadding = ImVec2(8.0f, 8.0f);
     style.WindowRounding = 10.0f;
     style.WindowBorderSize = 0.0f;
