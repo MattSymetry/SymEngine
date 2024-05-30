@@ -126,4 +126,5 @@ private:
     static const int m_maxUndoRedo = 100;
     UndoStack undoStack = UndoStack(m_maxUndoRedo);
     UndoStack redoStack = UndoStack(m_maxUndoRedo);
+    std::string mirrirShader(std::string node, NodeData nodeData);
 };

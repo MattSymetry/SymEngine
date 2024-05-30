@@ -92,6 +92,9 @@ NodeData* SceneGraphNode::getData() {
 	m_data.transform = m_transform.getWorldTransform();
 	if (m_hasObject) {
 		m_data.object = m_gameObject->getData();
+		m_data.object[2][0] = m_MirrorX;
+		m_data.object[2][1] = m_MirrorY;
+		m_data.object[2][2] = m_MirrorZ;
 	}
 	else {
 		m_data.object = {};
@@ -110,13 +113,16 @@ void SceneGraphNode::setData(const NodeData data) {
 	m_isGroup = !m_hasObject;
 	if (m_hasObject) {
 		GameObject* obj = new GameObject();
-		Shape* shape = new Shape(Shape::createShape(static_cast<Type>(data.object[3][3])));
+		Shape* shape = new Shape(Shape::createShape(static_cast<Type>(data.object[1][3])));
 		ShapeDataStruct shapeData;
 		shapeData.parameters = data.object;
-		shapeData.type = static_cast<int>(data.object[3][3]);
+		shapeData.type = static_cast<int>(data.object[1][3]);
 		shape->setShapeData(shapeData);
 		obj->addComponent(shape);
 		addObject(std::unique_ptr<GameObject>(obj));
+		m_MirrorX = data.object[2][0];
+		m_MirrorY = data.object[2][1];
+		m_MirrorZ = data.object[2][2];
 	}
 	m_transform.setWorldPosition(data.transform[2]);
 	m_transform.setWorldRotation(data.transform[1]);

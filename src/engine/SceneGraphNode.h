@@ -70,6 +70,9 @@ private:
 			shape->setShapeData(other.m_gameObject->getComponent<Shape>()->getStruct());
 			gObj->addComponent(shape);
 			m_gameObject = std::unique_ptr<GameObject>(gObj);
+			m_MirrorX = other.m_MirrorX;
+			m_MirrorY = other.m_MirrorY;
+			m_MirrorZ = other.m_MirrorZ;
 		}
 		else {
 			m_gameObject.reset();
@@ -137,4 +140,13 @@ public:
 	float getColorGoop() { return m_colorGoop; }
 	void setData(const NodeData data);
 	void setId(int id) { m_id = id; m_data.data0.w = id; }
+	bool m_MirrorX = false;
+	bool m_MirrorY = false;
+	bool m_MirrorZ = false;
+	void setMirrorX(bool mirror) { m_MirrorX = mirror; m_data.object[2][0] = mirror ? 1.0f : 0.0f; }
+	void setMirrorY(bool mirror) { m_MirrorY = mirror; m_data.object[2][1] = mirror ? 1.0f : 0.0f; }
+	void setMirrorZ(bool mirror) { m_MirrorZ = mirror; m_data.object[2][2] = mirror ? 1.0f : 0.0f; }
+	bool getMirrorX() { return m_MirrorX; }
+	bool getMirrorY() { return m_MirrorY; }
+	bool getMirrorZ() { return m_MirrorZ; }
 };

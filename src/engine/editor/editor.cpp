@@ -565,7 +565,7 @@ void Editor::getInspector(Scene* scene)
                     Type newType = NameToTypeMap.find(shapeNames[currentShapeId])->second;
                     shape->setType(newType);
                     hasChanges = true;
-                   scene->needsRecompilation = true;
+                    scene->needsRecompilation = true;
                 }
 
                 ImGui::Spacing();
@@ -634,6 +634,29 @@ void Editor::getInspector(Scene* scene)
                 default:
                     break;
                 }
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                ImGui::Text(ICON_LC_UNFOLD_HORIZONTAL " Mirror");
+                ImGui::PopFont();
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                ImGui::Text("X");
+                ImGui::SameLine();
+                bool mirrorX = node->getMirrorX();
+                if (ImGui::Checkbox("##XMirror", &mirrorX)) { node->setMirrorX(mirrorX); hasChanges = true; scene->needsRecompilation = true; }
+                ImGui::SameLine();
+                ImGui::Text("Y");
+                ImGui::SameLine();
+                bool mirrorY = node->getMirrorY();
+                if (ImGui::Checkbox("##YMirror", &mirrorY)) { node->setMirrorY(mirrorY);  hasChanges = true; scene->needsRecompilation = true; }
+                ImGui::SameLine();
+                ImGui::Text("Z");
+                ImGui::SameLine();
+                bool mirrorZ = node->getMirrorZ();
+                if (ImGui::Checkbox("##ZMirror", &mirrorZ)) { node->setMirrorZ(mirrorZ); hasChanges = true; scene->needsRecompilation = true;}
 
             }
             if (hasChanges) scene->performAction(scene->CreateSnapshot(false));

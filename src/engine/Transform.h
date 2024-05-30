@@ -71,6 +71,11 @@ public:
         }
         m_worldTransform = *m_parentTransform;
         glm::vec3 rotChildPos = rotateChild(m_worldTransform[2], m_worldTransform[1], m_transform.position);
+        // Set parent rotation
+       // m_worldTransform[0][0] = m_worldTransform[1][0];
+        //m_worldTransform[0][1] = m_worldTransform[1][1];
+        //m_worldTransform[0][2] = m_worldTransform[1][2];
+        
         // Set rotation
         m_worldTransform[1][0] += m_transform.rotation.x;
         m_worldTransform[1][1] += m_transform.rotation.y;
@@ -80,6 +85,11 @@ public:
         m_worldTransform[2][0] = rotChildPos.x;
         m_worldTransform[2][1] = rotChildPos.y;
         m_worldTransform[2][2] = rotChildPos.z;
+
+        // Set local position
+        m_worldTransform[3][0] = m_transform.position.x;
+        m_worldTransform[3][1] = m_transform.position.y;
+        m_worldTransform[3][2] = m_transform.position.z;
     }
 
     const glm::vec3 getPosition() const {

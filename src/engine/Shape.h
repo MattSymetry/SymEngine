@@ -152,7 +152,7 @@ public:
 				m_shapeData.parameters[0][1] = shape.cone.angle;
 				break;
 		}
-        m_shapeData.parameters[3][3] = static_cast<float>(type);
+        m_shapeData.parameters[1][3] = static_cast<float>(type);
 		return m_shapeData.parameters;
 	}
 

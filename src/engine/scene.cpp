@@ -274,6 +274,9 @@ SceneGraphNode* Scene::DuplicateNode(SceneGraphNode* node, SceneGraphNode* paren
 			shape->setShapeData(node->getObject()->getComponent<Shape>()->getStruct());
 			obj->addComponent(shape);
 			newNode->addObject(std::unique_ptr<GameObject>(obj));
+            newNode->setMirrorX(node->getMirrorX());
+            newNode->setMirrorY(node->getMirrorY());
+            newNode->setMirrorZ(node->getMirrorZ());
 		}
         else {
 			newNode->setIsGroup(true);
@@ -324,8 +327,11 @@ void Scene::Update(int deltaTime) {
            
             if (!node->isGroup()) {
                 data->object = node->getObject()->getData();
+                data->object[2][0] = node->getMirrorX();
+                data->object[2][1] = node->getMirrorY();
+                data->object[2][2] = node->getMirrorZ();
             }
-            //data->data0.z = node->getBoolOperation();
+            data->data0.z = node->getBoolOperation();
             data->data1.x = node->getGoop();
             data->data1.y = node->getColorGoop();
             data->color = node->getColor();
@@ -396,6 +402,9 @@ void Scene::SerializeNode(SceneGraphNode* root) {
 
                 if (!node->isGroup()) {
                     serializedNode.object = node->getObject()->getData();
+                    serializedNode.object[2][0] = node->getMirrorX();
+                    serializedNode.object[2][1] = node->getMirrorY();
+                    serializedNode.object[2][2] = node->getMirrorZ();
                 }
                 serializedNode.transform = node->getTransform()->getWorldTransform();
 
@@ -524,8 +533,24 @@ void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
     if (updateNodes) updateNodeData();
 }
 
+std::string Scene::mirrirShader(std::string node, NodeData nodeData) {
+    std::string str = "tmpPos = pos;\n";
+    if (nodeData.object[2][0] > 0.1f) {
+		str += "tmpPos = Reflect(tmpPos, vec3(1.0,0.0,0.0), " + node + ".transform[2].xyz, rot);\n";
+	}
+    if (nodeData.object[2][1] > 0.1f) {
+        str += "tmpPos = Reflect(tmpPos, vec3(0.0,1.0,0.0), " + node + ".transform[2].xyz, rot);\n";
+	}
+	if (nodeData.object[2][2] > 0.1f) {
+		str += "tmpPos = Reflect(tmpPos, vec3(0.0,0.0,1.0), " + node + ".transform[2].xyz, rot);\n";
+	}
+	return str; 
+}
+
 std::string Scene::getShaderCode() {
     m_shaderCode = m_shaderBegin;
+    m_shaderCode += "vec3 tmpPos = pos;\n";
+    m_shaderCode += "mat3 rot;\n";
     if (m_sceneSize <= 1) {
 		m_shaderCode += "return SDFData(vec4(1.0, 0.0, 0.0, 0.0), -1);}\n";
 		return m_shaderCode;
@@ -534,21 +559,35 @@ std::string Scene::getShaderCode() {
     for (int i = 0; i < m_sceneSize; i++) {
 		NodeData node = m_nodeData[i];
         std::string nodeStr = "SceneNodes.nodes["+ std::to_string(i) +"]";
+        bool hasMirror = (node.object[2][0] > 0.1f || node.object[2][1] > 0.1f || node.object[2][2] > 0.1f);
         if (node.data0.x > 0 && objectsShaders[node.data0.y] != "") { // not empty group
             std::string gName = "g" + std::to_string(i);
-            std::string result = "SDFData "+gName + " = "+ objectsShaders[node.data0.y]+";\n";
+            std::string result = "";
+            nodeStr = "SceneNodes.nodes[" + std::to_string(node.data0.y) + "]";
+            hasMirror = (m_nodeData[node.data0.y].object[2][0] > 0.1f || m_nodeData[node.data0.y].object[2][1] > 0.1f || m_nodeData[node.data0.y].object[2][2] > 0.1f);
+            result += "rot = Rotate(radians(" + nodeStr + ".transform[1].x), radians(" + nodeStr + ".transform[1].y), radians(" + nodeStr + ".transform[1].z));\n";
+            if (hasMirror) {
+				result += mirrirShader("SceneNodes.nodes[" + std::to_string(i) + "]", m_nodeData[node.data0.y]);
+			}
+            result += "SDFData "+gName + " = "+ objectsShaders[node.data0.y]+";\n";
             for (int j = 1; j < node.data0.x; ++j) {
                 int childIndex = node.data0.y + j;
+                nodeStr = "SceneNodes.nodes[" + std::to_string(childIndex) + "]";
+                hasMirror = (node.object[2][0] > 0.1f || node.object[2][1] > 0.1f || node.object[2][2] > 0.1f);
                 if (objectsShaders[childIndex] != "") {
+                    result += "rot = Rotate(radians(" + nodeStr + ".transform[1].x), radians(" + nodeStr + ".transform[1].y), radians(" + nodeStr + ".transform[1].z));\n";
+                    if (hasMirror) {
+                        result += mirrirShader("SceneNodes.nodes[" + std::to_string(i) + "]", m_nodeData[childIndex]);
+                    }
                     switch (m_nodeData[childIndex].data0.z) {
 					    case Union:
-						    result += gName + " = opU("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
+						    result += gName + " = opU("+ objectsShaders[childIndex] +", "+gName+", "+ nodeStr +".data1.x, " + nodeStr + ".data1.y);\n";
 						    break;
 					    case Intersection:
-						    result += gName + " = opI("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
+						    result += gName + " = opI("+ objectsShaders[childIndex] +", "+gName+", " + nodeStr + ".data1.x, " + nodeStr + ".data1.y);\n";
 						    break;
 					    case Difference:
-						    result += gName + " = opS("+ objectsShaders[childIndex] +", "+gName+", SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.x, SceneNodes.nodes[" + std::to_string(childIndex) + "].data1.y);\n";
+						    result += gName + " = opS("+ objectsShaders[childIndex] +", "+gName+", " + nodeStr + ".data1.x, " + nodeStr + ".data1.y);\n";
 						    break;
 				    }
                 }
@@ -557,14 +596,15 @@ std::string Scene::getShaderCode() {
             objectsShaders[i] = gName;
         }
         else if (node.data0.x == -1) { // object
-            std::string pos = "(Rotate(radians(" + nodeStr + ".transform[1].x), radians(" + nodeStr + ".transform[1].y), radians(" + nodeStr + ".transform[1].z)) * (pos- " + nodeStr + ".transform[2].xyz))";
-            if (node.object[3].w == 0) { // Sphere
+            std::string p = (hasMirror) ? "tmpPos" : "pos";
+            std::string pos = "(rot * ("+p+" - " + nodeStr + ".transform[2].xyz))";
+            if (node.object[1].w == 0) { // Sphere
                 objectsShaders[i] = "SDFData(vec4(sdSphere("+pos+", " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) +")";
             }
-            else if (node.object[3].w == 1) { // Box
+            else if (node.object[1].w == 1) { // Box
                 objectsShaders[i] = "SDFData(vec4(sdRoundBox("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
-            else if (node.object[3].w == 2) { // Cone
+            else if (node.object[1].w == 2) { // Cone
                 objectsShaders[i] = "SDFData(vec4(sdCone(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
 
             }
