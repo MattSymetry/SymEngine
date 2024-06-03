@@ -8,20 +8,11 @@ file(GLOB_RECURSE SOURCES "*.cpp")
 file(GLOB_RECURSE HEADERS "*.h" "*.hpp")
 
 source_group("Shader" FILES ${GLSL_SOURCE_FILES})
-add_executable(SYMYS ${SOURCES} ${HEADERS} ${GLSL_SOURCE_FILES} ${PROJECT_SOURCE_DIR}/../../resources/resource.rc)
+add_executable(SYMYS ${SOURCES} ${HEADERS} ${PROJECT_SOURCE_DIR}/../../resources/resource.rc)
 
 if (WIN32)
     target_sources(SYMYS PRIVATE ${PROJECT_SOURCE_DIR}/../../resources/resource.rc)
 endif()
-
-foreach(GLSL_FILE ${GLSL_FILES})
-    get_filename_component(FILE_NAME ${GLSL_FILE} NAME)
-    set(OUTPUT_PATH "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${FILE_NAME}")
-    add_custom_command(TARGET SYMYS POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy ${GLSL_FILE} ${OUTPUT_PATH}
-        COMMENT "Copying ${GLSL_FILE} to ${OUTPUT_PATH}")
-endforeach()
 
 set_property(TARGET SYMYS PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:SYMYS>")
 

@@ -3,15 +3,40 @@
 #include "glm/gtc/type_ptr.hpp"
 #include "tinyfiledialogs.h"
 
-Editor::Editor()
+Editor::Editor(Scene* scene)
 {
     m_maskScene = glm::vec4(0.0f);
     m_maskCode = glm::vec4(0.0f);
     m_maskInspector = glm::vec4(0.0f);
+    auto lang = TextEditor::LanguageDefinition::GLSL();
+    m_editor.SetLanguageDefinition(lang);
+    m_editor.SetPalette(TextEditor::GetDarkPalette());
+    m_editor.SetText(m_defaultCode);
+    std::set<int> readOnlyLines = { 0, 1 };
+    m_editor.SetReadOnlyLines(readOnlyLines);
+    setCodeLineOffset();
+
 }
 
 Editor::~Editor()
 {
+}
+
+bool Editor::codeEditorIsActive()
+{
+    return m_editor.IsFocused();
+}
+
+void Editor::setCodeLineOffset()
+{
+    std::vector<char> shader = vkUtil::prepareShader();
+    std::string str(shader.begin(), shader.end());
+    std::string::size_type pos = 0;
+    while ((pos = str.find('\n', pos)) != std::string::npos) {
+        ++pos;
+        ++m_shaderCodeLinesOffset;
+    }
+    std::cout << "Shader code lines offset: " << m_shaderCodeLinesOffset << std::endl;
 }
 
 bool Editor::hasCorrectExtension(const std::string& filename, const std::string& extension) {
@@ -730,6 +755,133 @@ void Editor::getSettings(Scene* scene)
 	}
 }
 
+void Editor::getCode(Scene* scene)
+{
+    if (scene != nullptr)
+    {
+        bool hasChanges = false;
+        SceneGraphNode* node = scene->GetSelectedNode();
+        if (scene->GetSelectedId() <= 0 || scene->GetSelectedNode()->isGroup()) {
+            m_editor.SetReadOnly(true);
+            m_editor.SetText(m_defaultCode);
+            m_selectedCode = -1;
+        }
+        else {
+            m_editor.SetReadOnly(false);
+            if (scene->GetSelectedId() != m_selectedCode) {
+                Shape* shape = node->getObject()->getComponent<Shape>();
+                m_editor.SetText(scene->getShaderByName(shape->getShaderName(), shape->getType()));
+                m_newFunctionName = shape->getShaderName()+"New";
+            }
+            m_selectedCode = scene->GetSelectedId();
+        }
+        bool clicked = false;
+        if (scene->GetSelectedId() > 0 && !scene->GetSelectedNode()->isGroup()) {
+            if (ImGui::Button(ICON_LC_CIRCLE_PLAY " Run")) {
+                clicked = true;
+		    }
+            Shape* shape = node->getObject()->getComponent<Shape>();
+            float avail = ImGui::GetContentRegionAvail().x;
+            ImGui::SameLine(avail * 0.8);
+            int currentFuncId = 0;
+            bool idFound = false;
+
+            std::vector<char*> functionNames;
+            std::vector<ShaderShape> shapes = scene->m_shapes[shape->getType()];
+            for (const auto& pair : scene->m_shapes[shape->getType()]) {
+                functionNames.push_back(const_cast<char*>(pair.name.c_str()));
+                if (!idFound && pair.name != shape->getShaderName()) {
+                    currentFuncId++;
+                }
+                else {
+                    idFound = true;
+                }
+            }
+
+            ImGui::SameLine(avail * 0.8 + ImGui::GetStyle().ItemSpacing.x);
+            ImGui::SetNextItemWidth(avail * 0.2);
+            if (ImGui::Combo("##FunctionNameSelect", &currentFuncId, functionNames.data(), functionNames.size())) {
+                shape->setShaderName(functionNames[currentFuncId]);
+                m_editor.SetText(scene->getShaderByName(functionNames[currentFuncId], shape->getType()));
+                hasChanges = true;
+                scene->needsRecompilation = true;
+            }
+
+            ImGui::Checkbox("Auto Compile", &m_autoCompile);
+            
+            avail = ImGui::GetContentRegionAvail().x;
+            ImGui::SameLine(avail * 0.6);
+            
+            char nameBuffer[100];
+            std::strncpy(nameBuffer, m_newFunctionName.c_str(), sizeof(nameBuffer));
+            nameBuffer[sizeof(nameBuffer) - 1] = 0;
+            ImGui::SetNextItemWidth(avail * 0.2);
+            if (ImGui::InputText("##FunctionName", nameBuffer, sizeof(nameBuffer))) {
+                m_newFunctionName = std::string(nameBuffer);
+            }
+
+            bool nameAlreadyExists = (std::find(functionNames.begin(), functionNames.end(), m_newFunctionName) != functionNames.end());
+
+            ImGui::SameLine();
+
+            if (nameAlreadyExists || m_newFunctionName.length() < 4) ImGui::BeginDisabled();
+            if (ImGui::Button(ICON_LC_CIRCLE_PLUS " New Function", ImVec2(avail * 0.2, 0.0))) {
+                std::string oldFunctionName = shape->getShaderName();
+                std::string newCode = m_editor.GetText();
+                size_t pos = newCode.find(oldFunctionName);
+                if (pos != std::string::npos) {
+                    newCode.replace(pos, oldFunctionName.length(), m_newFunctionName);
+                }
+                m_editor.SetText(newCode);
+                scene->AddShape(m_newFunctionName, newCode, shape->getType());
+                shape->setShaderName(m_newFunctionName);
+                scene->needsRecompilation = true;
+            }
+            if (nameAlreadyExists || m_newFunctionName.length() < 4) ImGui::EndDisabled();
+        }
+
+        if (!m_errors.empty()) {
+            TextEditor::ErrorMarkers markers;
+            for (const auto& error : m_errors) {
+                markers[error.line - m_shaderCodeLinesOffset] = error.message;
+            }
+            m_editor.SetErrorMarkers(markers);
+        }
+        else {
+			m_editor.SetErrorMarkers({});
+		}
+
+		m_editor.Render("Code Editor");
+
+        if (m_editor.IsTextChanged())
+        {
+            char* error = nullptr;
+            vkUtil::compileShaderSourceToSpirv(m_editor.GetText(), "", GLSLANG_STAGE_COMPUTE, true, &error);
+            if (error != nullptr) {
+                std::string errorString = error;
+                m_errors = parseGlslErrors(error);
+            }
+            else {
+				m_errors.clear();
+                if (m_autoCompile) {
+					SceneGraphNode* node = scene->GetSelectedNode();
+					Shape* shape = node->getObject()->getComponent<Shape>();
+					scene->setShaderByName(shape->getShaderName(), m_editor.GetText(), shape->getType());
+					scene->needsRecompilation = true;
+				}
+			}
+		}
+        if (clicked && m_errors.empty() && scene->GetSelectedId() > 0) {
+            SceneGraphNode* node = scene->GetSelectedNode();
+            Shape* shape = node->getObject()->getComponent<Shape>();
+            std::string s = m_editor.GetText();
+            scene->setShaderByName(shape->getShaderName(), m_editor.GetText(), shape->getType());
+            scene->needsRecompilation = true;
+        }
+        if (hasChanges) scene->performAction(scene->CreateSnapshot(false));
+	}
+}
+
 void Editor::SettingsPanel(Scene* scene)
 {
     auto flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar;
@@ -772,7 +924,7 @@ void Editor::SettingsPanel(Scene* scene)
     {
         m_maskCode = glm::vec4(0.0f);
     }
-    ImGui::Text("Hello, Code!");
+    getCode(scene);
     ImGui::End();
     //--------------------------------------------------------------------------
     ImGui::Begin(ICON_LC_TEXT_CURSOR_INPUT" Inspector", nullptr, flags);

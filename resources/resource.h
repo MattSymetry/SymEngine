@@ -2,3 +2,7 @@
 
 #define IDR_FONT1 201
 #define IDR_FONT2 202
+
+#define IDR_SHADER_DEF 301
+#define IDR_SHADER_CSG 302
+#define IDR_SHADER_RENDER 303

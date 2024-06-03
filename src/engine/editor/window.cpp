@@ -23,7 +23,7 @@ Window::Window(int width, int height, bool debug, std::string filename)
     
     _engine = new Engine(width, height, _window, _scene);
 
-    _editor = new Editor();
+    _editor = new Editor(_scene);
 
     _tmpMousePosX = _width / 2;
     _tmpMousePosY = _height / 2;
@@ -111,14 +111,14 @@ void Window::run() {
        }
 
        if (SDL_PollEvent(&e)) {
-            
+
             if (e.type == SDL_QUIT)
             {
                 bQuit = true;
                 render = false;
                // renderThread.join();
             }
-            else if (e.type == SDL_KEYDOWN && !ImGui::IsAnyItemActive())
+            else if (e.type == SDL_KEYDOWN && !ImGui::IsAnyItemActive() && !_editor->codeEditorIsActive())
             {
                 _scene->KeyPressed(e.key.keysym.sym);
                 SDL_Keymod mod = SDL_GetModState();

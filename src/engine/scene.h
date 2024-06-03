@@ -94,6 +94,12 @@ public:
     std::string getShaderCode();
     bool needsRecompilation = false;
     int getSceneSize() { return m_sceneSize; }
+    std::string getShaderByName(std::string name, Type type);
+    void setShaderByName(std::string name, std::string code, Type type);
+    void AddShape(std::string name, std::string code, Type type);
+    std::map<Type, std::vector<ShaderShape>> m_shapes;
+    float getShapeIdByName(std::string name, Type type);
+    std::string getShapeNameById(float id, Type type);
 private:
     std::string m_filename = "";
     glm::vec4 m_backgroundColor = glm::vec4(0.01f, 0.01f, 0.01f, 1.0f);
@@ -127,4 +133,6 @@ private:
     UndoStack undoStack = UndoStack(m_maxUndoRedo);
     UndoStack redoStack = UndoStack(m_maxUndoRedo);
     std::string mirrirShader(std::string node, NodeData nodeData);
+    void InitShapes();
+    std::string getAllShapesCode();
 };

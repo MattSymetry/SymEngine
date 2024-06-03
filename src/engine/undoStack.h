@@ -3,6 +3,7 @@
 #include <stack>
 #include <deque>
 #include "cereal/types/vector.hpp"
+#include "cereal/types/map.hpp"
 
 struct SceneData {
     std::vector<NodeData> nodeData;
@@ -15,6 +16,7 @@ struct SceneData {
     glm::vec4 sunPosition;
     float outlineThickness;
     glm::vec4 outlineColor;
+    std::map<Type, std::vector<ShaderShape>> shaderShapes;
 
     bool operator==(const SceneData& other) const {
         return sceneSize == other.sceneSize &&
@@ -27,11 +29,12 @@ struct SceneData {
             outlineThickness == other.outlineThickness &&
             outlineColor == other.outlineColor &&
             names == other.names;
+            shaderShapes == other.shaderShapes;
     }
 
     template <class Archive>
     void serialize(Archive& archive) {
-        archive(nodeData, names, sceneSize, showGrid, AA, selectedId, backgroundColor, sunPosition, outlineThickness, outlineColor);
+        archive(nodeData, names, sceneSize, showGrid, AA, selectedId, backgroundColor, sunPosition, outlineThickness, outlineColor, shaderShapes);
     }
 };
 

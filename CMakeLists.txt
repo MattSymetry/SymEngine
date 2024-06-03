@@ -39,8 +39,4 @@ add_custom_target(Shaders SOURCES ${GLSL_SOURCE_FILES})
 
 file(GLOB_RECURSE ASSETS_SOURCE_FILES "${PROJECT_SOURCE_DIR}/assets/*")
 
-foreach(GLSL ${GLSL_SOURCE_FILES})
-  list(APPEND GLSL_FILES ${GLSL})
-endforeach(GLSL)
-
 set(GLSL_FILES ${GLSL_FILES} CACHE INTERNAL "List of SPIR-V binary files")

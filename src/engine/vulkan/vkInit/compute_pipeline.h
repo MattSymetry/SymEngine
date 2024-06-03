@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 #include "../../../common/config.h"
 #include "../vkUtil/shaders.h"
 #include "../vkUtil/render_structs.h"

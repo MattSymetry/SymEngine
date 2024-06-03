@@ -188,8 +188,21 @@ std::vector<char> vkUtil::readFile(std::string filename) {
 	return buffer; 
 }
 
-std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shaderSource, const std::string& inputFilename, glslang_stage_t shaderStage) {
+std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(std::string& shaderSource, const std::string& inputFilename, glslang_stage_t shaderStage, bool onlyCheckCode, char** error) {
     std::vector<uint32_t> resultingSpirv;
+    if (onlyCheckCode) {
+        std::vector<char> sourceCode = prepareShader();
+        std::vector<char> tmp(shaderSource.begin(), shaderSource.end());
+        sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
+        std::string mapCode = "SDFData map(in vec3 pos) {return SDFData(vec4(1.0, 0.0, 0.0, 0.0), -1);} \n";
+        tmp = std::vector<char>(mapCode.begin(), mapCode.end());
+        sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
+        tmp = endShader();
+        sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
+
+        std::string str(sourceCode.begin(), sourceCode.end());
+        shaderSource = str;
+    }
     const char* shaderCode = shaderSource.c_str();
     static const auto defaultResources = get_default_resource();
 
@@ -212,17 +225,36 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
 
     if (!glslang_shader_preprocess(shader, &input))
     {
-        std::cout << "\nERROR:   Failed to preprocess shader[" << inputFilename << "] of kind["
-                  << "\n         Log[" << glslang_shader_get_info_log(shader) << "]"
-                  << "\n         Debug-Log[" << glslang_shader_get_info_debug_log(shader) << "]" << std::endl;
+        if (onlyCheckCode)
+        {
+           *error = new char[strlen(glslang_shader_get_info_log(shader)) + 1];
+           strcpy(*error, glslang_shader_get_info_log(shader));
+		}
+        else {
+            std::cout << "\nERROR:   Failed to preprocess shader[" << inputFilename << "] of kind["
+                << "\n         Log[" << glslang_shader_get_info_log(shader) << "]"
+                << "\n         Debug-Log[" << glslang_shader_get_info_debug_log(shader) << "]" << std::endl;
+        }
         return resultingSpirv;
     }
 
     if (!glslang_shader_parse(shader, &input))
     {
-        std::cout << "\nERROR:   Failed to parse shader[" << inputFilename << "] of kind["
-                  << "\n         Log[" << glslang_shader_get_info_log(shader) << "]"
-                  << "\n         Debug-Log[" << glslang_shader_get_info_debug_log(shader) << "]" << std::endl;
+        if (onlyCheckCode)
+        {
+            *error = new char[strlen(glslang_shader_get_info_log(shader)) + 1];
+            strcpy(*error, glslang_shader_get_info_log(shader));
+        }
+        else {
+            std::cout << "\nERROR:   Failed to parse shader[" << inputFilename << "] of kind["
+                << "\n         Log[" << glslang_shader_get_info_log(shader) << "]"
+                << "\n         Debug-Log[" << glslang_shader_get_info_debug_log(shader) << "]" << std::endl;
+        }
+        return resultingSpirv;
+    }
+
+    if (onlyCheckCode)
+    {
         return resultingSpirv;
     }
 
@@ -256,19 +288,15 @@ std::vector<uint32_t> vkUtil::compileShaderSourceToSpirv(const std::string& shad
 } 
 
 std::vector<char> vkUtil::prepareShader() {
-    std::vector<char> shader = readFile("/shaders/definitions.comp");
-    auto tmp = readFile("/shaders/shapes.comp");
-    shader.insert(shader.end(), tmp.begin(), tmp.end());
-    tmp = readFile("/shaders/csg.comp");
+    std::vector<char> shader = LoadShaderResource(IDR_SHADER_DEF);
+    auto tmp = LoadShaderResource(IDR_SHADER_CSG);
     shader.insert(shader.end(), tmp.begin(), tmp.end());
     
     return shader;
 }
 
 std::vector<char> vkUtil::endShader() {
-    std::vector<char> shader = readFile("/shaders/render.comp");
-    
-    return shader;
+    return LoadShaderResource(IDR_SHADER_RENDER);
 }
 
 vk::ShaderModule vkUtil::createModule(std::string shaderCode, vk::Device device) {
@@ -295,4 +323,24 @@ vk::ShaderModule vkUtil::createModule(std::string shaderCode, vk::Device device)
 		message << "Failed to create shader module for \"" << "GenCode" << "\"";
 		vkLogging::Logger::get_logger()->print(message.str());
 	}
+}
+
+std::vector<char> vkUtil::LoadShaderResource(UINT resourceID) {
+    HRSRC hRes = FindResource(NULL, MAKEINTRESOURCE(resourceID), TEXT("SHADER"));
+    if (hRes == NULL) {
+        std::cerr << "Failed to find resource." << std::endl;
+        return std::vector<char>();
+    }
+    HGLOBAL hResData = LoadResource(NULL, hRes);
+    if (hResData == NULL) {
+        std::cerr << "Failed to load resource." << std::endl;
+        return std::vector<char>();
+    }
+    DWORD dataSize = SizeofResource(NULL, hRes);
+    void* pResData = LockResource(hResData);
+    if (pResData == NULL) {
+        std::cerr << "Failed to lock resource." << std::endl;
+        return std::vector<char>();
+    }
+    return std::vector<char>(static_cast<char*>(pResData), static_cast<char*>(pResData) + dataSize);
 }

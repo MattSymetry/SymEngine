@@ -37,10 +37,31 @@ static const std::map<std::string, Type> NameToTypeMap = {
     {ICON_LC_CUBOID " Box", Type::Box},
     {ICON_LC_CONE " Cone", Type::Cone}
 };
+
+struct ShaderShape {
+    std::string name;
+    std::string code;
+    float id = -1.0f;
+    ShaderShape(std::string n, std::string c) : name(n), code(c) {
+        id = static_cast<float>(std::hash<std::string>{}(name));
+    }
+    ShaderShape() : name(""), code("") {}
+
+    bool operator==(const ShaderShape& other) const {
+		return id == other.id;
+	}
+
+    template <class Archive>
+    void serialize(Archive& archive) {
+		archive(name, code, id);
+	}
+};
+
 class Shape : public Component {
 public:
     ShapeDataStruct m_shapeData;
     Type type;
+    std::string shaderName;
 
     union ShapeUnion {
         Sphere sphere;
@@ -53,16 +74,19 @@ public:
 
     // Constructors for each shape type
     Shape(const Sphere& s) : type(Type::Sphere) {
+        shaderName = "sdSphere";
         m_shapeData.type = 0;
         new (&shape.sphere) Sphere(s);
     }
 
     Shape(const Box& b) : type(Type::Box) {
+        shaderName = "sdRoundBox";
         m_shapeData.type = 1;
         new (&shape.box) Box(b);
     }
 
     Shape(const Cone& c) : type(Type::Cone) {
+        shaderName = "sdCone";
         m_shapeData.type = 2;
         new (&shape.cone) Cone(c);
     }
@@ -73,6 +97,7 @@ public:
 
     void setNewShape(const Shape& other) {
         type = other.type;
+        shaderName = other.shaderName;
         switch (type) {
         case Type::Sphere:
             m_shapeData.type = 0;
@@ -93,6 +118,7 @@ public:
         if (this != &other) {
             this->~Shape();
             type = other.type;
+            shaderName = other.shaderName;
             switch (type) {
                 case Type::Sphere:
                     m_shapeData.type = 0;
@@ -123,12 +149,15 @@ public:
         type = t;
         m_shapeData.type = static_cast<int>(t);
         if (t == Type::Sphere) {
+            shaderName = "sdSphere";
 			new (&shape.sphere) Sphere();
         }
         else if (t == Type::Box) {
+            shaderName = "sdRoundBox";
 			new (&shape.box) Box();
         }
         else if (t == Type::Cone) {
+            shaderName = "sdCone";
 			new (&shape.cone) Cone();
 		}
     }
@@ -153,11 +182,15 @@ public:
 				break;
 		}
         m_shapeData.parameters[1][3] = static_cast<float>(type);
+        m_shapeData.parameters[1][2] = static_cast<float>(std::hash<std::string>{}(shaderName));
 		return m_shapeData.parameters;
 	}
 
-    void setShapeData(ShapeDataStruct data) {
+    void setShapeData(ShapeDataStruct data, std::string sName = "") {
 		m_shapeData = data;
+        if (sName != "") {
+			shaderName = sName;
+		}
 		type = static_cast<Type>(data.type);
 		switch (type) {
 			case Type::Sphere:
@@ -174,6 +207,14 @@ public:
 				shape.cone.angle = data.parameters[0][1];
 				break;
 		}
+	}
+
+    std::string getShaderName() {
+        return shaderName;
+    }
+
+    void setShaderName(std::string sName) {
+		shaderName = sName;
 	}
 
     ~Shape() {

@@ -625,7 +625,7 @@ std::vector<char> Engine::LoadEmbeddedFontResource(int resourceID) {
 	HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(resourceID), RT_FONT);
 	HGLOBAL hLoadedResource = LoadResource(hModule, hResource);
 	DWORD dwResourceSize = SizeofResource(hModule, hResource);
-	const void* pResourceData = LockResource(hLoadedResource);
+	const void* pResourceData = LockResource(hLoadedResource); 
 
 	std::vector<char> fontData(static_cast<const char*>(pResourceData),
 		static_cast<const char*>(pResourceData) + dwResourceSize);

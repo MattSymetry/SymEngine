@@ -26,6 +26,8 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     description.showGrid = m_showGrid;
     description.AA = m_AA;
 
+    InitShapes();
+
     m_viewport = viewport; 
     AddBuffer(sizeof(description), vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &description);
     AddBuffer(4, vk::BufferUsageFlagBits::eUniformBuffer, vk::DescriptorType::eUniformBuffer, &frameCount);
@@ -44,6 +46,56 @@ void Scene::AddBuffer(size_t size, vk::BufferUsageFlagBits usage, vk::Descriptor
 
 void Scene::SetupObjects() {
     
+}
+
+void Scene::InitShapes() {
+    m_shapes[Type::Sphere] = std::vector<ShaderShape>();
+    m_shapes[Type::Box] = std::vector<ShaderShape>();
+    m_shapes[Type::Cone] = std::vector<ShaderShape>();
+	AddShape("sdSphere", R"(
+float sdSphere( vec3 position, float radius )
+{
+    return length(position)-radius; 
+}
+)", Type::Sphere);
+
+	AddShape("sdRoundBox", R"(
+float sdRoundBox( vec3 p, vec3 b, float r )
+{
+  vec3 q = abs(p) - b + r;
+  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
+}
+)", Type::Box);
+
+	AddShape("sdCone", R"(
+float sdCone( vec3 p, vec2 c, float h )
+{
+  float q = length(p.xz);
+  return max(dot(c.xy,vec2(q,p.y)),-h-p.y);
+}
+)", Type::Cone);
+}
+
+void Scene::AddShape(std::string name, std::string code, Type type) {
+    m_shapes[type].push_back(ShaderShape(name, code));
+}
+
+float Scene::getShapeIdByName(std::string name, Type type) {
+    for (int i = 0; i < m_shapes[type].size(); i++) {
+		if (m_shapes[type][i].name == name) {
+			return m_shapes[type][i].id;
+		}
+	}
+    return -1.0f;
+}
+
+std::string Scene::getShapeNameById(float id, Type type) {
+	for (int i = 0; i < m_shapes[type].size(); i++) {
+		if (m_shapes[type][i].id == id) {
+			return m_shapes[type][i].name;
+		}
+	}
+	return "";
 }
 
 void Scene::KeyPressed(SDL_Keycode key) {
@@ -193,6 +245,7 @@ void Scene::RecreateScene(SceneData* data) {
     m_sceneGraph = SceneGraphNode(0, false, nullptr, data->names[m_sceneSize-1]);
     m_sceneGraph.setId(0);
 	m_sceneGraphNodes.push_back(&m_sceneGraph);
+    m_shapes = data->shaderShapes;
     m_idCounter = 0;
     if (m_sceneSize > 1 && data->nodeData[m_sceneSize - 1].data0.x > 0) {
         for (int i = 0; i < data->nodeData[m_sceneSize - 1].data0.x; i++) {
@@ -222,6 +275,10 @@ SceneGraphNode* Scene::CreateNodeFromData(int id, SceneGraphNode* parent) {
     node->setId(m_idCounter);
     node->setParent(parent);
     node->setData(m_tmpSceneData.nodeData[id]);
+    if (!node->isGroup()) {
+        Shape* shape = node->getObject()->getComponent<Shape>();
+        shape->setShaderName(getShapeNameById(m_tmpSceneData.nodeData[id].object[1][2], shape->getType()));
+    }
     m_sceneGraphNodes.push_back(node);
     if (m_tmpSceneData.nodeData[id].data0.x > 0) {
         for (int i = 0; i < m_tmpSceneData.nodeData[id].data0.x; i++) {
@@ -248,6 +305,7 @@ SceneData Scene::CreateSnapshot(bool saveToHistory) {
     data.outlineThickness = m_outlineThickness;
     data.showGrid = m_showGrid;
     data.sunPosition = m_sunPosition;
+    data.shaderShapes = m_shapes;
     if (saveToHistory) {
         performAction(m_tmpSceneData);
         endAction();
@@ -547,8 +605,39 @@ std::string Scene::mirrirShader(std::string node, NodeData nodeData) {
 	return str; 
 }
 
+std::string Scene::getAllShapesCode() {
+	std::string shapesCode = "";
+    for (auto& shapes : m_shapes) {
+        for (auto& shape : shapes.second) {
+			shapesCode += shape.code;
+		}
+	}
+	return shapesCode + "\n";
+}
+
+std::string Scene::getShaderByName(std::string shaderName, Type type) {
+    std::vector<ShaderShape> shapes = m_shapes[type];
+    for (auto& shape : shapes) {
+        if (shape.name == shaderName) {
+            return shape.code;
+        }
+    }
+    return "";
+}
+
+void Scene::setShaderByName(std::string name, std::string code, Type type) {
+    for (auto& shape : m_shapes[type]) {
+        if (shape.name == name) {
+			shape.code = code;
+			return;
+		}
+	}
+    AddShape(name, code, type);
+}
+
 std::string Scene::getShaderCode() {
-    m_shaderCode = m_shaderBegin;
+    m_shaderCode = getAllShapesCode();
+    m_shaderCode += m_shaderBegin;
     m_shaderCode += "vec3 tmpPos = pos;\n";
     m_shaderCode += "mat3 rot;\n";
     if (m_sceneSize <= 1) {
@@ -558,6 +647,7 @@ std::string Scene::getShaderCode() {
     std::vector<std::string> objectsShaders(m_sceneSize);
     for (int i = 0; i < m_sceneSize; i++) {
 		NodeData node = m_nodeData[i];
+        SceneGraphNode* sgNode = GetSceneGraphNode(node.data0.w);
         std::string nodeStr = "SceneNodes.nodes["+ std::to_string(i) +"]";
         bool hasMirror = (node.object[2][0] > 0.1f || node.object[2][1] > 0.1f || node.object[2][2] > 0.1f);
         if (node.data0.x > 0 && objectsShaders[node.data0.y] != "") { // not empty group
@@ -598,14 +688,15 @@ std::string Scene::getShaderCode() {
         else if (node.data0.x == -1) { // object
             std::string p = (hasMirror) ? "tmpPos" : "pos";
             std::string pos = "(rot * ("+p+" - " + nodeStr + ".transform[2].xyz))";
+            std::string shaderName = sgNode->getObject()->getComponent<Shape>()->getShaderName();
             if (node.object[1].w == 0) { // Sphere
-                objectsShaders[i] = "SDFData(vec4(sdSphere("+pos+", " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) +")";
+                objectsShaders[i] = "SDFData(vec4("+ shaderName + "(" + pos + ", " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
             else if (node.object[1].w == 1) { // Box
-                objectsShaders[i] = "SDFData(vec4(sdRoundBox("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
+                objectsShaders[i] = "SDFData(vec4(" + shaderName + "("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
             else if (node.object[1].w == 2) { // Cone
-                objectsShaders[i] = "SDFData(vec4(sdCone(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
+                objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
 
             }
         }

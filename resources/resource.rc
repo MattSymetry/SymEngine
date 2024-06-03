@@ -3,3 +3,7 @@
 IDI_APP_ICON ICON "icon.ico"
 IDR_FONT1 FONT "RobotoMono-Regular.ttf"
 IDR_FONT2 FONT "lucideSmall.ttf"
+
+IDR_SHADER_DEF SHADER "../shaders/definitions.comp"
+IDR_SHADER_CSG SHADER "../shaders/csg.comp"
+IDR_SHADER_RENDER SHADER "../shaders/render.comp"
