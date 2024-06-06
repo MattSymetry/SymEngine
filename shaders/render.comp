@@ -1,4 +1,14 @@
-SDFData raycast( in vec3 ro, in vec3 rd)
+vec3 checkersGradBox( in vec2 p, in vec2 dpdx, in vec2 dpdy, in vec3 col )
+{
+    p *= 8.0;
+    dpdx *= 8.0;
+    dpdy *= 8.0;
+    vec2 w = abs(dpdx)+abs(dpdy) + 0.001;
+    vec2 i = 2.0*(abs(fract((p-0.5*w)*0.5)-0.5)-abs(fract((p+0.5*w)*0.5)-0.5))/w;
+    return col * (0.5 - 0.5*i.x*i.y);              
+}
+
+SDFData raycast( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy)
 {
     SDFData res = SDFData(vec4(-1.0), -1);
 
@@ -16,15 +26,19 @@ SDFData raycast( in vec3 ro, in vec3 rd)
 
         for( int i=0; i<256 && t<tmax; i++ )
         {
-            SDFData h = map( ro+rd*t);
+            vec3 currPos = ro + rd*t;
+            SDFData h = map( currPos);
             edgeLength = min(abs(h.data.x), edgeLength);
             if( abs(h.data.x)<(0.0005*t) )
             { 
                 res.data = vec4(t,h.data.yzw);
+                if (h.id == currSelectedId) {
+                    //res.data.yzw = checkersGradBox(currPos.xz, (ro.y*(rd/rd.y-rdx/rdx.y)).xz, (ro.y*(rd/rd.y-rdy/rdy.y)).xz, h.data.yzw);
+                }
                 res.id = h.id;
                 break;
             }
-            if (SceneData.outlineTickness > 0.0 && abs(h.data.x)/4.0 > edgeLength && edgeLength <= SceneData.outlineTickness ) 
+            if (abs(h.data.x)/4.0 > edgeLength && edgeLength <= SceneData.outlineTickness ) 
             {
                 res.data = vec4(-20.0,0.0,0.0,0.0);
                 break;
@@ -135,7 +149,7 @@ SDFData render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
     vec3 col = vec3(0.5, 0.5, 0.7) - max(rd.y,0.0)*0.3;
     col = SceneData.backgroundColor.xyz;
     // raycast scene
-    SDFData resData = raycast(ro,rd);
+    SDFData resData = raycast(ro,rd, rdx, rdy);
     vec4 res = resData.data;
     float t = res.x;
 	float m = res.y;
@@ -204,6 +218,7 @@ mat3 setCamera( in vec3 ro, in vec3 ta, float cr )
 
 void main()
 {
+    currSelectedId = selectedId;
     int AA = SceneData.AA;
     vec4 tot = vec4(0.0);
     SDFData res = SDFData(vec4(0.0), -1);

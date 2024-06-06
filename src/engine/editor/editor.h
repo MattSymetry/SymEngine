@@ -86,17 +86,17 @@ private:
 
 	// Define your keybindings
 	const Keybinding keybindings[12] = {
-		{"F", "Focus on selected object"},
-		{"Delete", "Delete selected object"},
-		{"Ctrl+C", "Copy selected object"},
-		{"Ctrl+V", "Paste copied object"},
-		{"Ctrl+D", "Duplicate selected object"},
+		{"F", "Focus on selected element"},
+		{"Delete", "Delete selected element"},
+		{"Ctrl+C", "Copy selected element"},
+		{"Ctrl+V", "Paste copied element"},
+		{"Ctrl+D", "Duplicate selected element"},
 		{"Ctrl+Z", "Undo last action"},
 		{"Ctrl+Y", "Redo last undone action"},
 		{"Ctrl+S", "Save current scene"},
 		{"Ctrl+Shift+S", "Save current scene as"},
 		{"Ctrl+N", "Create new scene"},
 		{"Ctrl+O", "Open existing scene"},
-		{"Shift+A", "Open popup to add item"}
+		{"Shift+A", "Open popup to add element"}
 	};
 };

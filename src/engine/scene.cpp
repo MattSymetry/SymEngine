@@ -55,6 +55,8 @@ void Scene::InitShapes() {
 	AddShape("sdSphere", R"(
 float sdSphere( vec3 position, float radius )
 {
+	//float t = time / 2.0;
+	//radius += 0.008*sin(t + position.x*50)+0.008*sin(t + position.y*50)+0.008*sin(t + position.z*50);
     return length(position)-radius; 
 }
 )", Type::Sphere);
@@ -62,18 +64,70 @@ float sdSphere( vec3 position, float radius )
 	AddShape("sdRoundBox", R"(
 float sdRoundBox( vec3 p, vec3 b, float r )
 {
-  vec3 q = abs(p) - b + r;
-  return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
+    vec3 q = abs(p) - b + r;
+    return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
 }
 )", Type::Box);
 
 	AddShape("sdCone", R"(
-float sdCone( vec3 p, vec2 c, float h )
+float sdCone( vec3 p, float h, float ra, float rb)
 {
-  float q = length(p.xz);
-  return max(dot(c.xy,vec2(q,p.y)),-h-p.y);
+    vec3 a = vec3(0.0,h/2.0,0.0);
+    vec3 b = vec3(0.0,-h/2.0,0.0);
+    float rba  = rb-ra;
+    float baba = dot(b-a,b-a);
+    float papa = dot(p-a,p-a);
+    float paba = dot(p-a,b-a)/baba;
+
+    float x = sqrt( papa - paba*paba*baba );
+
+    float cax = max(0.0,x-((paba<0.5)?ra:rb));
+    float cay = abs(paba-0.5)-0.5;
+
+    float k = rba*rba + baba;
+    float f = clamp( (rba*(x-ra)+paba*baba)/k, 0.0, 1.0 );
+
+    float cbx = x-ra - f*rba;
+    float cby = paba - f;
+    
+    float s = (cbx < 0.0 && cay < 0.0) ? -1.0 : 1.0;
+    
+    return s*sqrt( min(cax*cax + cay*cay*baba,
+                       cbx*cbx + cby*cby*baba) );
 }
 )", Type::Cone);
+    AddShape("sdCylinder", R"(
+float sdCylinder( vec3 p, float h, float r )
+{
+    vec2 d = abs(vec2(length(p.xz),p.y)) - vec2(r,h);
+    return min(max(d.x,d.y),0.0) + length(max(d,0.0));
+}
+)", Type::Cylinder);
+    AddShape("sdPyramid", R"(
+    float sdPyramid( in vec3 p, in float h, in float w )
+{
+    float m2 = h*h + 0.25;
+    // Adjust xz coordinates by the base width
+    p.xz /= w;
+    p.xz = abs(p.xz);
+    p.xz = (p.z > p.x) ? p.zx : p.xz;
+    p.xz -= 0.5;
+    vec3 q = vec3(p.z, h*p.y - 0.5*p.x, h*p.x + 0.5*p.y);
+    float s = max(-q.x, 0.0);
+    float t = clamp((q.y - 0.5*q.x) / (m2 + 0.25), 0.0, 1.0);
+    float a = m2 * (q.x + s) * (q.x + s) + q.y * q.y;
+    float b = m2 * (q.x + 0.5 * t) * (q.x + 0.5 * t) + (q.y - m2 * t) * (q.y - m2 * t);
+    float d2 = max(-q.y, q.x * m2 + q.y * 0.5) < 0.0 ? 0.0 : min(a, b);
+    return sqrt((d2 + q.z * q.z) / m2) * sign(max(q.z, -p.y)) * w;
+}
+)", Type::Pyramid);
+    AddShape("sdTorus", R"(
+float sdTorus( vec3 p, float ri, float ro )
+{
+	vec2 t = vec2(length(p.xz)-ri,p.y);
+	return length(t)-ro;
+}
+)", Type::Torus);
 }
 
 void Scene::AddShape(std::string name, std::string code, Type type) {
@@ -107,8 +161,7 @@ void Scene::KeyPressed(SDL_Keycode key) {
 		}
 	}
     if (key == SDLK_f) {
-        m_camera.LookAt(GetSelectedNode()->getTransform()->getWorldTransform()[2]);
-        description.camera_target = m_camera.getTarget();
+        setCameraTarget(GetSelectedNode()->getTransform()->getWorldTransform()[2]);
     }
 }
  
@@ -593,14 +646,15 @@ void Scene::RemoveSceneGraphNode(SceneGraphNode* node, bool updateNodes) {
 
 std::string Scene::mirrirShader(std::string node, NodeData nodeData) {
     std::string str = "tmpPos = pos;\n";
+    std::string parentRot = "Rotate(radians(" + node + ".transform[1].x), radians(" + node + ".transform[1].y), radians(" + node + ".transform[1].z))";
     if (nodeData.object[2][0] > 0.1f) {
-		str += "tmpPos = Reflect(tmpPos, vec3(1.0,0.0,0.0), " + node + ".transform[2].xyz, rot);\n";
+		str += "tmpPos = Reflect(tmpPos, vec3(1.0,0.0,0.0), " + node + ".transform[2].xyz, " + parentRot + "); \n";
 	}
     if (nodeData.object[2][1] > 0.1f) {
-        str += "tmpPos = Reflect(tmpPos, vec3(0.0,1.0,0.0), " + node + ".transform[2].xyz, rot);\n";
+        str += "tmpPos = Reflect(tmpPos, vec3(0.0,1.0,0.0), " + node + ".transform[2].xyz, " + parentRot + ");\n";
 	}
 	if (nodeData.object[2][2] > 0.1f) {
-		str += "tmpPos = Reflect(tmpPos, vec3(0.0,0.0,1.0), " + node + ".transform[2].xyz, rot);\n";
+		str += "tmpPos = Reflect(tmpPos, vec3(0.0,0.0,1.0), " + node + ".transform[2].xyz, " + parentRot + ");\n";
 	}
 	return str; 
 }
@@ -663,7 +717,7 @@ std::string Scene::getShaderCode() {
             for (int j = 1; j < node.data0.x; ++j) {
                 int childIndex = node.data0.y + j;
                 nodeStr = "SceneNodes.nodes[" + std::to_string(childIndex) + "]";
-                hasMirror = (node.object[2][0] > 0.1f || node.object[2][1] > 0.1f || node.object[2][2] > 0.1f);
+                hasMirror = (m_nodeData[childIndex].object[2][0] > 0.1f || m_nodeData[childIndex].object[2][1] > 0.1f || m_nodeData[childIndex].object[2][2] > 0.1f);
                 if (objectsShaders[childIndex] != "") {
                     result += "rot = Rotate(radians(" + nodeStr + ".transform[1].x), radians(" + nodeStr + ".transform[1].y), radians(" + nodeStr + ".transform[1].z));\n";
                     if (hasMirror) {
@@ -696,8 +750,16 @@ std::string Scene::getShaderCode() {
                 objectsShaders[i] = "SDFData(vec4(" + shaderName + "("+pos+", " + nodeStr + ".obejctData[0].xyz, " + nodeStr + ".obejctData[0].w), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
             else if (node.object[1].w == 2) { // Cone
-                objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", vec2(sin(" + nodeStr + ".obejctData[0].y), cos(" + nodeStr + ".obejctData[0].y)), " + nodeStr + ".obejctData[0].x), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
-
+                objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", " + nodeStr + ".obejctData[0].x, " + nodeStr + ".obejctData[0].y, " + nodeStr + ".obejctData[0].z), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
+            }
+            else if (node.object[1].w == 3) { // Cylinder
+            	objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", " + nodeStr + ".obejctData[0].x, " + nodeStr + ".obejctData[0].y), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
+            }
+            else if (node.object[1].w == 4) { // Pyramid
+            	objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", " + nodeStr + ".obejctData[0].x, " + nodeStr + ".obejctData[0].y), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
+            }
+            else if (node.object[1].w == 5) { // Torus
+            	objectsShaders[i] = "SDFData(vec4(" + shaderName + "(" + pos + ", " + nodeStr + ".obejctData[0].x, " + nodeStr + ".obejctData[0].y), " + nodeStr + ".color.xyz), " + std::to_string(node.data0.w) + ")";
             }
         }
 	}

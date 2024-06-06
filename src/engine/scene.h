@@ -58,6 +58,7 @@ public:
     std::array<NodeData, m_maxObjects> GetNodeData() { return m_nodeData; }
     Camera m_camera;
     void setCameraPosition(glm::vec3 pos) { m_camera.setPosition(pos); description.camera_position = pos; }
+    void setCameraTarget(glm::vec3 target) { m_camera.LookAt(target); description.camera_target = target; }
     glm::vec4 getBackgroundColor() { return m_backgroundColor; }
     void setBackgroundColor(glm::vec4 color);
     glm::vec4 getSunPosition() { return m_sunPosition; }

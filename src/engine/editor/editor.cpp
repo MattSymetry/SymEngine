@@ -293,6 +293,15 @@ void Editor::DrawSceneGraphNode(SceneGraphNode* node, bool draw, bool destroy, S
                         case Type::Cone:
                             pre += ICON_LC_CONE " ";
 							break;
+                        case Type::Cylinder:
+							pre += ICON_LC_CYLINDER " ";
+							break;
+                        case Type::Pyramid:
+							pre += ICON_LC_PYRAMID " ";
+							break;
+                        case Type::Torus:
+                            pre += ICON_LC_TORUS " ";
+                            break;
                     default:
                         break;
                     }
@@ -645,15 +654,94 @@ void Editor::getInspector(Scene* scene)
                         hasChanges = true;
 					}
                     ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                    ImGui::Text("Angle");
+                    ImGui::Text("Top Radius");
                     ImGui::PopFont();
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::DragFloat("##Angle", &cone.angle, 0.1f, 1.0, 70.0, "%.3f")) {
-                        if (cone.angle < 1.0f) { cone.angle = 1.0f; }
-						else if (cone.angle > 70.0f) { cone.angle = 70.0f; }
+                    if (ImGui::DragFloat("##topRadius", &cone.topRadius, 0.01f, 0.0, 70.0, "%.3f")) {
+                        if (cone.topRadius < 0.0f) { cone.topRadius = 0.0f; }
+						else if (cone.topRadius > 70.0f) { cone.topRadius = 70.0f; }
                         shape->shape.cone = cone;
                         hasChanges = true;
                     }
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Bottom Radius");
+                    ImGui::PopFont();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::DragFloat("##bottomRadius", &cone.bottomRadius, 0.01f, 0.0, 70.0, "%.3f")) {
+                        if (cone.bottomRadius < 0.0f) { cone.bottomRadius = 0.0f; }
+                        else if (cone.bottomRadius > 70.0f) { cone.bottomRadius = 70.0f; }
+                        shape->shape.cone = cone;
+                        hasChanges = true;
+                    }
+                    }
+					break;
+                case Type::Cylinder: {
+						Cylinder cylinder = shape->shape.cylinder;
+						ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+						ImGui::Text("Height");
+						ImGui::PopFont();
+						ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                        if (ImGui::DragFloat("##HeightCyl", &cylinder.height, 0.01f, 0.001f, 100.0f, "%.3f")) {
+							if (cylinder.height < 0.001f) { cylinder.height = 0.001f; }
+							shape->shape.cylinder = cylinder;
+							hasChanges = true;
+						}
+						ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+						ImGui::Text("Radius");
+						ImGui::PopFont();
+						ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                        if (ImGui::DragFloat("##RadiusCyl", &cylinder.radius, 0.01f, 0.001f, 70.0f, "%.3f")) {
+							if (cylinder.radius < 0.001f) { cylinder.radius = 0.001f; }
+							else if (cylinder.radius > 70.0f) { cylinder.radius = 70.0f; }
+							shape->shape.cylinder = cylinder;
+							hasChanges = true;
+						}
+					}
+                    break;
+                case Type::Pyramid: {
+                    Pyramid pyramid = shape->shape.pyramid;
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Height");
+                    ImGui::PopFont();
+                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                    if (ImGui::DragFloat("##HeightPyramid", &pyramid.height, 0.01f, 0.001f, 100.0f, "%.3f")) {
+						if (pyramid.height < 0.001f) { pyramid.height = 0.001f; }
+						shape->shape.pyramid = pyramid;
+						hasChanges = true;
+                    }
+                    ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                    ImGui::Text("Base Size");
+                    ImGui::PopFont();
+                    if (ImGui::DragFloat("##BasePyramid", &pyramid.base, 0.01f, 0.001f, 100.0f, "%.3f")) {
+                        if (pyramid.base < 0.001f) { pyramid.base = 0.001f; }
+                        shape->shape.pyramid = pyramid;
+                        hasChanges = true;
+                    }
+                    }
+                    break;
+                case Type::Torus: {
+                        Torus torus = shape->shape.torus;
+                        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+                        ImGui::Text("Radius");
+                        ImGui::PopFont();
+                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                        if (ImGui::DragFloat("##RadiusTorus", &torus.majorRadius, 0.01f, 0.001f, 100.0f, "%.3f")) {
+							if (torus.majorRadius < 0.001f) { torus.majorRadius = 0.001f; }
+                            if (torus.majorRadius <= torus.minorRadius) { torus.minorRadius = torus.majorRadius - 0.001f; }
+							shape->shape.torus = torus;
+							hasChanges = true;
+						}
+
+                        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+						ImGui::Text("Width");
+						ImGui::PopFont();
+						ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                        if (ImGui::DragFloat("##InnerRadiusTorus", &torus.minorRadius, 0.01f, 0.001f, 100.0f, "%.3f")) {
+                            if (torus.minorRadius < 0.001f) { torus.minorRadius = 0.001f; }
+                            if (torus.minorRadius >= torus.majorRadius) { torus.majorRadius = torus.minorRadius + 0.001f; }
+                            shape->shape.torus = torus;
+                            hasChanges = true;
+                        }
                     }
 					break;
                 default:
@@ -751,6 +839,38 @@ void Editor::getSettings(Scene* scene)
 		}
 
         ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text(ICON_LC_VIDEO " Camera Look at");
+        ImGui::PopFont();
+        glm::vec3 camTarget = scene->m_camera.getTarget();
+        if (drawFloat3("##CamTarget", camTarget, 0.1f, -100.0f, 100.0f))
+        {
+            scene->setCameraTarget(camTarget);
+        }
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text(ICON_LC_MINUS " Anti-Aliasing");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int AA = scene->getAA();
+        if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 4)) {
+            scene->setAA(AA);
+        }
+
+        ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+        ImGui::Text(ICON_LC_GRID_3X3 " Grid");
+        ImGui::PopFont();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        int showGrid = scene->getShowGrid();
+        bool showGridBool = showGrid;
+        if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
+            scene->showGrid(int(showGridBool));
+        }
 
 	}
 }
@@ -991,27 +1111,6 @@ void Editor::MenuBar(Scene* scene)
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
             if (ImGui::SliderFloat("##CamOrbSpeed", &scene->m_orbitSpeed, 0.1f, 2.0f))
             {
-            }
-
-            ImGui::Spacing();
-
-            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-            ImGui::Text(ICON_LC_MINUS " Anti-Aliasing");
-            ImGui::PopFont();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            int AA = scene->getAA();
-            if (ImGui::SliderInt("##Anti-Aliasing", &AA, 1, 4)) {
-                scene->setAA(AA);
-            }
-
-            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-            ImGui::Text(ICON_LC_GRID_3X3 " Grid");
-            ImGui::PopFont();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            int showGrid = scene->getShowGrid();
-            bool showGridBool = showGrid;
-            if (ImGui::Checkbox("##ShowGrid", &showGridBool)) {
-                scene->showGrid(int(showGridBool));
             }
             
             ImGui::EndMenu();
