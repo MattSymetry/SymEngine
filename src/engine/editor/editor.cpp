@@ -1117,11 +1117,24 @@ void Editor::MenuBar(Scene* scene)
         }
         if (ImGui::BeginMenu("Render"))
         {
-            if (ImGui::Selectable("Get Code"))
+            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            ImGui::Text(ICON_LC_FRAME " Resolution");
+            ImGui::PopFont();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::DragInt2("##Resolution", &m_imageSize.x , 1.0f, 1, 16384))
+            {
+				if (m_imageSize.x < 1) m_imageSize.x = 1;
+                if (m_imageSize.y < 1) m_imageSize.y = 1;
+                if (m_imageSize.x > 16384) m_imageSize.x = 16384;
+                if (m_imageSize.y > 16384) m_imageSize.y = 16384;
+			}
+
+            ImGui::Spacing();
+
+            if (ImGui::Selectable(ICON_LC_IMAGE" Render Image"))
             {
                 ImGui::CloseCurrentPopup();
-                scene->getShaderCode();
-
+                m_renderImage = true;
             }
             
             ImGui::EndMenu();

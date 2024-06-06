@@ -1,0 +1,259 @@
+vec3 checkersGradBox( in vec2 p, in vec2 dpdx, in vec2 dpdy, in vec3 col )
+{
+    p *= 8.0;
+    dpdx *= 8.0;
+    dpdy *= 8.0;
+    vec2 w = abs(dpdx)+abs(dpdy) + 0.001;
+    vec2 i = 2.0*(abs(fract((p-0.5*w)*0.5)-0.5)-abs(fract((p+0.5*w)*0.5)-0.5))/w;
+    return col * (0.5 - 0.5*i.x*i.y);              
+}
+
+SDFData raycast( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy)
+{
+    SDFData res = SDFData(vec4(-1.0), -1);
+
+    float tmin = 0.1;
+    float tmax = 20.0;
+    
+    // raymarch scene
+    vec2 tb = iBox( ro, rd, vec3(10,10,10) );
+    if( tb.x<tb.y && tb.y>0.0 && tb.x<tmax) 
+    {
+        float edgeLength = tmax;
+        tmin = max(tb.x,tmin);
+        tmax = min(tb.y,tmax);
+        float t = tmin;
+
+        for( int i=0; i<256 && t<tmax; i++ )
+        {
+            vec3 currPos = ro + rd*t;
+            SDFData h = map( currPos);
+            edgeLength = min(abs(h.data.x), edgeLength);
+            if( abs(h.data.x)<(0.0005*t) )
+            { 
+                res.data = vec4(t,h.data.yzw);
+                if (h.id == currSelectedId) {
+                    //res.data.yzw = checkersGradBox(currPos.xz, (ro.y*(rd/rd.y-rdx/rdx.y)).xz, (ro.y*(rd/rd.y-rdy/rdy.y)).xz, h.data.yzw);
+                }
+                res.id = h.id;
+                break;
+            }
+            if (abs(h.data.x)/4.0 > edgeLength && edgeLength <= SceneData.outlineTickness ) 
+            {
+                res.data = vec4(-20.0,0.0,0.0,0.0);
+                break;
+            }
+            t += h.data.x;
+        }
+    }
+    
+    return res;
+}
+
+//______________________________________________________________________________
+int ZERO = 0;
+float calcSoftshadow( in vec3 ro, in vec3 rd)
+{
+    float res = 1.0;
+    float tmax = 12.0;  
+    float t = 0.02;
+    for( int i=0; i<36; i++ )
+    {
+		float h = map( ro + rd*t).data.x;
+        res = min( res, mix(1.0,16.0*h/t, 1.0) );
+        t += clamp( h, 0.05, 0.40 );
+        if( res<0.005 || t>tmax ) break;
+    }
+    return clamp( res, 0.0, 1.0 );
+}
+
+vec3 calcNormal( in vec3 pos )
+{
+    vec3 n = vec3(0.0);
+    for( int i=ZERO; i<8; i++ )
+    {
+        vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
+        n += e*map(pos+0.0005*e).data.x;
+    }
+    return normalize(n);
+ 
+}
+
+float calcAO( in vec3 pos, in vec3 nor )
+{
+	float occ = 0.0;
+    float sca = 1.0;
+    for( int i=ZERO; i<5; i++ )
+    {
+        float h = 0.01 + 0.12*float(i)/4.0;
+        float d = map( pos + h*nor).data.x;
+        occ += (h-d)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 2.0*occ, 0.0, 1.0 );
+}
+
+vec4 castXZPlane(vec3 rayOrigin, vec3 rayDirection)
+{
+    float mul = 1.0;
+    if (rayOrigin.y < 0.0) mul = -1.0;
+    
+    vec3 castRayOrigin = rayOrigin;
+ 	float distToPlane = abs(castRayOrigin.y);
+    vec3 castRayDirection = rayDirection / rayDirection.y;
+    castRayDirection *= distToPlane;
+    
+    castRayOrigin -= mul * castRayDirection;
+    
+    return vec4((castRayOrigin).xz, (dot(rayDirection * mul, castRayDirection) < 0.0 ? 1.0 : 0.0), length(castRayDirection));
+}
+
+float planeToLines(vec4 plane)
+{
+ 	vec2 uv = fract(plane.xy + 0.5);
+    float width = 0.006 * (plane.w);
+    float fade = smoothstep(100.0, -20.0, plane.w);
+	return min((smoothstep(width, 0.0, abs(uv.x - 0.5)) + smoothstep(width, 0.0, abs(uv.y - 0.5))) * plane.z, 1.0) * fade;
+}
+
+vec2 planeToAxis(vec4 plane)
+{
+ 	float width = 0.006 * (plane.w);
+    float fade = smoothstep(100.0, -20.0, plane.w);
+    float xAxis = smoothstep(width, 0.0, abs(plane.x));
+    float yAxis = smoothstep(width, 0.0, abs(plane.y));
+    return vec2(xAxis, yAxis) * plane.z * fade;
+}
+
+vec4 getGrid(vec3 rayOrigin, vec3 rayDirection)
+{
+    vec4 xzPlane = castXZPlane(rayOrigin.zyx, rayDirection.zyx);
+    float xzLines = planeToLines(xzPlane);
+    vec2 xzAxis = planeToAxis(xzPlane);
+
+    vec4 grid = vec4(0.0);
+
+    vec4 x = vec4(0.0, 1.0, 0.557, 1.0);
+    vec4 z = vec4(0.478, 0.0, 1.0, 1.0);
+    grid += xzLines*0.3 + x*xzAxis.x + z*xzAxis.y;
+    
+    return grid;
+}
+
+//______________________________________________________________________________
+
+
+SDFData render( in vec3 ro, in vec3 rd, in vec3 rdx, in vec3 rdy )
+{ 
+    // background
+    vec3 col = vec3(0.5, 0.5, 0.7) - max(rd.y,0.0)*0.3;
+    col = SceneData.backgroundColor.xyz;
+    // raycast scene
+    SDFData resData = raycast(ro,rd, rdx, rdy);
+    vec4 res = resData.data;
+    float t = res.x;
+	float m = res.y;
+    if( t > -0.5 )
+    {
+        vec3 pos = ro + t*rd;
+        vec3 nor = calcNormal( pos );
+        vec3 ref = reflect( rd, nor );
+        
+        // material        
+        col = res.yzw;
+        float ks = 1.0;
+
+        // lighting
+        float occ = calcAO( pos, nor );
+        
+        float fre = clamp(1.0+dot(nor,rd),0.0,1.0);
+        
+        vec3  sun_lig = normalize( SceneData.sunPos.xyz );
+        float sun_dif = clamp(dot( nor, sun_lig ), 0.0, 1.0 );
+        vec3  sun_hal = normalize( sun_lig-rd );
+        float sun_sha = calcSoftshadow( pos, sun_lig );
+		float sun_spe = ks*pow(clamp(dot(nor,sun_hal),0.0,1.0),8.0)*sun_dif*(0.04+0.96*pow(clamp(1.0+dot(sun_hal,rd),0.0,1.0),5.0));
+		float sky_dif = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
+        float sky_spe = ks*smoothstep( 0.0, 0.5, ref.y )*(0.04+0.96*pow(fre,4.0));
+        float bou_dif = sqrt(clamp( 0.1-0.9*nor.y, 0.0, 1.0 ))*clamp(1.0-0.1*pos.y,0.0,1.0);
+        float bac_dif = clamp(0.1+0.9*dot( nor, normalize(vec3(-sun_lig.x,0.0,-sun_lig.z))), 0.0, 1.0 );
+        float sss_dif = fre*sky_dif*(0.25+0.75*sun_dif*sun_sha);
+
+		vec3 lin = vec3(0.0);
+        lin += sun_dif*vec3(1.0)*vec3(sun_sha,sun_sha*sun_sha*0.5+0.5*sun_sha,sun_sha*sun_sha);
+        lin += sky_dif*vec3(0.2, 0.2, 0.4)*occ;
+        lin += bou_dif*vec3(0.1, 0.1, 0.2)*occ;
+        lin += bac_dif*vec3(0.25,0.15,0.05)*occ;
+        lin += sss_dif*vec3(1.25,0.75,0.50)*occ;
+		col = col*lin;
+		col += sun_spe*vec3(5.90,4.10,2.30)*sun_sha;
+        col += sky_spe*vec3(0.20,0.30,0.65)*occ*occ;
+      	
+        col = pow(col,vec3(0.8,0.9,1.0) );
+        
+        // fog
+        col = mix( col, vec3(0.5,0.7,0.9), 1.0-exp( -0.0001*t*t*t ) );
+    }
+    else if (t < -10.0)
+    {
+        col = SceneData.outlineCol.xyz; // Edge
+    }
+    vec3 tmp = vec3( clamp(col,0.0,1.0));
+    return SDFData(vec4(col,1.0), resData.id);
+}
+
+mat3 setCamera( in vec3 ro, in vec3 ta, float cr )
+{
+	vec3 cw = normalize(ta-ro);
+	vec3 cp = vec3(sin(cr), cos(cr),0.0);
+	vec3 cu = normalize( cross(cw,cp) );
+	vec3 cv =          ( cross(cu,cw) );
+    return mat3( cu, cv, cw );
+}
+
+void main()
+{
+    screen_pos = gi;
+    currSelectedId = selectedId;
+    int AA = 8;
+    vec4 tot = vec4(0.0);
+    SDFData res = SDFData(vec4(0.0), -1);
+    for( int m=0; m<AA; m++ ) {
+        for( int n=0; n<AA; n++ )
+        {
+            // camera
+            vec2 o = vec2(float(m),float(n)) / float(AA) - 0.5;
+            //vec2 o = vec2(1.3);
+            vec3 ta = SceneData.camera_target;
+            vec3 ro = SceneData.camera_position;
+            mat3 ca = setCamera( ro, ta, SceneData.camera_roll );
+            vec2 p = (2.0*(screen_pos+o)-screen_size.xy)/screen_size.y;
+
+            float fovRadians = radians(SceneData.camera_fov);
+            float tanHalfFov = tan(fovRadians / 2.0);
+
+            vec3 rd = ca * normalize(vec3(p * tanHalfFov, 1.0));
+
+            // ray differentials
+            vec2 px = (2.0*(screen_pos+vec2(1.0,0.0))-screen_size.xy)/screen_size.y;
+            vec2 py = (2.0*(screen_pos+vec2(0.0,1.0))-screen_size.xy)/screen_size.y;
+            vec3 rdx = ca * normalize( vec3(px* tanHalfFov, 1.0) );
+            vec3 rdy = ca * normalize( vec3(py* tanHalfFov, 1.0) );
+
+            // render	
+            res = render( ro, rd, rdx, rdy );
+            vec3 col = res.data.xyz;
+
+            // gain
+            // col = col*3.0/(2.5+col);
+
+            // gamma
+            col = pow( col, vec3(0.4545) );
+
+            tot += vec4(col,1.0);
+        }
+    }
+    tot /= float(AA*AA);
+    screen_pos = ivec2(screen_pos.x, screen_size.y - screen_pos.y);
+    imageStore(colorBuffer, screen_pos, tot);
+}

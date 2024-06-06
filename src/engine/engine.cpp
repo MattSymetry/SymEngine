@@ -1,3 +1,4 @@
+#pragma once
 #include "engine.h"
 #include "logging.h"
 #include "vulkan/vkInit/instance.h"
@@ -8,6 +9,8 @@
 #include "vulkan/vkInit/sync.h"
 #include "vulkan/vkInit/descriptors.h"
 #include "glslang/Public/ShaderLang.h"
+#include "vulkan/vkImage/lodepng.h"
+#include "tinyfiledialogs.h"
 
 
 
@@ -208,6 +211,306 @@ void Engine::SetupImGuiFonts(ImGuiIO& io) {
 	ImFont* myFontSmall = io.Fonts->AddFontFromMemoryTTF(fontData.data(), fontData.size(), 14.0f);
 	io.Fonts->AddFontFromMemoryTTF(iconFontData.data(), iconFontData.size(), 14.0f, &icons_config, icons_ranges);
 	io.Fonts->Build();
+}
+
+void Engine::createHighResImage(uint32_t width, uint32_t height) {
+	vk::ImageCreateInfo imageCreateInfo = {};
+	imageCreateInfo.imageType = vk::ImageType::e2D;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.format = vk::Format::eR8G8B8A8Unorm;
+	imageCreateInfo.tiling = vk::ImageTiling::eOptimal;
+	imageCreateInfo.initialLayout = vk::ImageLayout::eUndefined;
+	imageCreateInfo.usage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc;
+	imageCreateInfo.samples = vk::SampleCountFlagBits::e1;
+	imageCreateInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	m_highResImage = m_device.createImage(imageCreateInfo);
+
+	vk::MemoryRequirements memRequirements = m_device.getImageMemoryRequirements(m_highResImage);
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = vkUtil::findMemoryTypeIndex(m_physicalDevice, memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eDeviceLocal);
+
+	m_highResImageMemory = m_device.allocateMemory(allocInfo);
+	m_device.bindImageMemory(m_highResImage, m_highResImageMemory, 0);
+
+	vk::ImageViewCreateInfo viewCreateInfo = {};
+	viewCreateInfo.image = m_highResImage;
+	viewCreateInfo.viewType = vk::ImageViewType::e2D;
+	viewCreateInfo.format = vk::Format::eR8G8B8A8Unorm;
+	viewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	viewCreateInfo.subresourceRange.baseMipLevel = 0;
+	viewCreateInfo.subresourceRange.levelCount = 1;
+	viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	viewCreateInfo.subresourceRange.layerCount = 1;
+
+	m_highResImageView = m_device.createImageView(viewCreateInfo);
+}
+
+void Engine::createHgihResComputePipeline(vk::ShaderModule computeShaderModule, Scene* scene) {
+	// Descriptor Layout
+	vkInit::descriptorSetLayoutData bindings;
+	bindings.count = scene->buffers.size() + 1;
+
+	bindings.indices.push_back(0);
+	bindings.types.push_back(vk::DescriptorType::eStorageImage);
+	bindings.counts.push_back(1);
+	bindings.stages.push_back(vk::ShaderStageFlagBits::eCompute);
+
+	int index = 1;
+	for (BufferInitParams buff : scene->buffers) {
+		bindings.indices.push_back(index);
+		bindings.types.push_back(buff.descriptorType);
+		bindings.counts.push_back(1);
+		bindings.stages.push_back(vk::ShaderStageFlagBits::eCompute);
+		index++;
+	}
+
+	m_HighResDescriptorSetLayout = vkInit::make_descriptor_set_layout(m_device, bindings);
+
+	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.setLayoutCount = 1;
+	pipelineLayoutInfo.pSetLayouts = &m_HighResDescriptorSetLayout;
+
+	m_HighResPipelineLayout = m_device.createPipelineLayout(pipelineLayoutInfo);
+
+	vk::ComputePipelineCreateInfo pipelineInfo = {};
+	pipelineInfo.stage = vk::PipelineShaderStageCreateInfo()
+		.setStage(vk::ShaderStageFlagBits::eCompute)
+		.setModule(computeShaderModule)
+		.setPName("main");
+	pipelineInfo.layout = m_HighResPipelineLayout;
+
+	m_HighResComputePipeline = m_device.createComputePipeline(nullptr, pipelineInfo).value;
+}
+
+vk::CommandBuffer Engine::allocateHighResCommandBuffer(vk::CommandPool commandPool) {
+	vk::CommandBufferAllocateInfo allocInfo = {};
+	allocInfo.level = vk::CommandBufferLevel::ePrimary;
+	allocInfo.commandPool = commandPool;
+	allocInfo.commandBufferCount = 1;
+
+	vk::CommandBuffer commandBuffer;
+	m_device.allocateCommandBuffers(&allocInfo, &commandBuffer);
+	return commandBuffer;
+}
+
+void Engine::dispatchHighResCompute(vk::CommandPool commandPool, vk::Queue computeQueue, vk::DescriptorSet descriptorSet, uint32_t width, uint32_t height) {
+	vk::CommandBuffer commandBuffer = allocateHighResCommandBuffer(commandPool);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	commandBuffer.begin(beginInfo);
+
+	commandBuffer.bindPipeline(vk::PipelineBindPoint::eCompute, m_HighResComputePipeline);
+	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, m_HighResPipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+	commandBuffer.dispatch((width + 7) / 8, (height +7) / 8, 1);
+
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vk::Fence fence = m_device.createFence({});
+	computeQueue.submit(1, &submitInfo, fence);
+	m_device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
+
+	m_device.destroyFence(fence);
+	m_device.freeCommandBuffers(commandPool, 1, &commandBuffer);
+}
+
+void Engine::createReadBackBuffer(vk::DeviceSize size) {
+	vk::BufferCreateInfo bufferInfo = {};
+	bufferInfo.size = size;
+	bufferInfo.usage = vk::BufferUsageFlagBits::eTransferDst;
+	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
+
+	m_readBackBuffer = m_device.createBuffer(bufferInfo);
+
+	vk::MemoryRequirements memRequirements = m_device.getBufferMemoryRequirements(m_readBackBuffer);
+
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.allocationSize = memRequirements.size;
+	allocInfo.memoryTypeIndex = vkUtil::findMemoryTypeIndex(m_physicalDevice, memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+
+	m_readBackBufferMemory = m_device.allocateMemory(allocInfo);
+	m_device.bindBufferMemory(m_readBackBuffer, m_readBackBufferMemory, 0);
+}
+
+void Engine::readBackHighResImage(vk::CommandPool commandPool, vk::Queue graphicsQueue, vk::Buffer readBackBuffer, uint32_t width, uint32_t height) {
+	vk::CommandBuffer commandBuffer = allocateHighResCommandBuffer(commandPool);
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	commandBuffer.begin(beginInfo);
+
+	vk::ImageMemoryBarrier barrier = {};
+	barrier.oldLayout = vk::ImageLayout::eGeneral;
+	barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+	barrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+	barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+	barrier.image = m_highResImage;
+	barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+	barrier.subresourceRange.baseMipLevel = 0;
+	barrier.subresourceRange.levelCount = 1;
+	barrier.subresourceRange.baseArrayLayer = 0;
+	barrier.subresourceRange.layerCount = 1;
+
+	commandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eComputeShader,
+		vk::PipelineStageFlagBits::eTransfer,
+		vk::DependencyFlags(),
+		0, nullptr,
+		0, nullptr,
+		1, &barrier
+	);
+
+	vk::BufferImageCopy copyRegion = {};
+	copyRegion.bufferOffset = 0;
+	copyRegion.bufferRowLength = 0;
+	copyRegion.bufferImageHeight = 0;
+	copyRegion.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
+	copyRegion.imageSubresource.mipLevel = 0;
+	copyRegion.imageSubresource.baseArrayLayer = 0;
+	copyRegion.imageSubresource.layerCount = 1;
+	copyRegion.imageOffset = vk::Offset3D(0, 0, 0);
+	copyRegion.imageExtent = vk::Extent3D( width, height, 1 );
+
+	commandBuffer.copyImageToBuffer(m_highResImage, vk::ImageLayout::eTransferSrcOptimal, readBackBuffer, 1, &copyRegion);
+
+	vk::MemoryBarrier memoryBarrier = {};
+	memoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+	memoryBarrier.dstAccessMask = vk::AccessFlagBits::eHostRead;
+
+	commandBuffer.pipelineBarrier(
+		vk::PipelineStageFlagBits::eTransfer,
+		vk::PipelineStageFlagBits::eHost,
+		vk::DependencyFlags(),
+		1, &memoryBarrier,
+		0, nullptr,
+		0, nullptr
+	);
+
+	commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &commandBuffer;
+
+	vk::Fence fence = m_device.createFence({});
+	graphicsQueue.submit(1, &submitInfo, fence);
+	m_device.waitForFences(1, &fence, VK_TRUE, UINT64_MAX);
+
+	m_device.destroyFence(fence);
+	m_device.freeCommandBuffers(commandPool, 1, &commandBuffer);
+}
+
+void Engine::saveImageAsPNG(const std::string& filename, const std::vector<uint8_t>& imageData, uint32_t width, uint32_t height) {
+	unsigned error = lodepng::encode(filename, imageData, width, height);
+	if (error) {
+		std::cout << "Error encoding PNG: " << lodepng_error_text(error) << std::endl;
+	}
+}
+
+void Engine::renderHighResImage(Scene* scene, uint32_t width, uint32_t height) {
+	const char* filters[] = { "*.png" };
+	std::string name = scene->getFilename();
+	name = name.substr(0, name.find_last_of("."));
+	if (name.empty()) {
+		name = "SymysRender";
+	}
+	const char* saveFileName = tinyfd_saveFileDialog(
+		"Save High-Resolution Image",
+		(name + ".png").c_str(),
+		1,
+		filters,
+		nullptr
+	);
+
+	if (!saveFileName) {
+		std::cout << "Save operation cancelled by user." << std::endl;
+		return;
+	}
+
+	// check for .png extension
+	if (saveFileName) {
+		std::string saveFileNameStr(saveFileName);
+		if (saveFileNameStr.find(".png") == std::string::npos) {
+			saveFileNameStr += ".png";
+			saveFileName = saveFileNameStr.c_str();
+		}
+	}
+
+	createHighResImage(width, height);
+	std::string shaderCode = scene->getShaderCode();
+	createHgihResComputePipeline(vkUtil::createModule(shaderCode, m_device, true), scene);
+	createReadBackBuffer(width * height * 4); // Assuming 4 bytes per pixel (R8G8B8A8)
+
+	// Descriptor Set
+	vkInit::descriptorSetLayoutData bindings2;
+	bindings2.count = scene->buffers.size() + 1;
+	bindings2.types.push_back(vk::DescriptorType::eStorageImage);
+
+	for (BufferInitParams buff : scene->buffers) {
+		bindings2.types.push_back(buff.descriptorType);
+	}
+
+	vk::DescriptorPool descPool = vkInit::make_descriptor_pool(m_device, static_cast<uint32_t>(m_swapchainFrames.size()), bindings2);
+
+	vk::DescriptorSet descriptorSet = vkInit::allocate_descriptor_set(m_device, descPool, m_HighResDescriptorSetLayout);
+
+	vk::DescriptorImageInfo imageInfo = {};
+	imageInfo.imageView = m_highResImageView;
+	imageInfo.imageLayout = vk::ImageLayout::eGeneral;
+
+	std::vector<vk::WriteDescriptorSet> writeOps;
+
+	vk::WriteDescriptorSet descriptorWrite = {};
+	descriptorWrite.dstSet = descriptorSet;
+	descriptorWrite.dstBinding = 0;
+	descriptorWrite.dstArrayElement = 0;
+	descriptorWrite.descriptorType = vk::DescriptorType::eStorageImage;
+	descriptorWrite.descriptorCount = 1;
+	descriptorWrite.pImageInfo = &imageInfo;
+	writeOps.push_back(descriptorWrite);
+
+	for (auto& bufferSetup : m_swapchainFrames[0].bufferSetups) {
+		vk::WriteDescriptorSet bufferOp;
+		bufferOp.dstSet = descriptorSet;
+		bufferOp.dstBinding = bufferSetup.dstBinding;
+		bufferOp.dstArrayElement = 0; //byte offset within binding for inline uniform blocks
+		bufferOp.descriptorCount = 1;
+		bufferOp.descriptorType = bufferSetup.descriptorType;
+		bufferOp.pBufferInfo = &bufferSetup.buffer.descriptor;
+		writeOps.push_back(bufferOp);
+	}
+
+	m_device.updateDescriptorSets(writeOps, nullptr);
+
+	// Dispatch compute shader
+	dispatchHighResCompute(m_commandPool, m_graphicsQueue, descriptorSet, width, height);
+
+	// Read back image data
+	readBackHighResImage(m_commandPool, m_graphicsQueue, m_readBackBuffer, width, height);
+
+	// Copy image data to host
+	std::vector<uint8_t> highResImageData(width * height * 4); // Assuming 4 bytes per pixel (R8G8B8A8)
+	void* mappedMemory = m_device.mapMemory(m_readBackBufferMemory, 0, highResImageData.size(), vk::MemoryMapFlags());
+	memcpy(highResImageData.data(), mappedMemory, highResImageData.size());
+	m_device.unmapMemory(m_readBackBufferMemory);
+
+	saveImageAsPNG(saveFileName, highResImageData, width, height);
+
+	// Clean up
+	m_device.destroyImageView(m_highResImageView);
+	m_device.destroyImage(m_highResImage);
+	m_device.freeMemory(m_highResImageMemory);
+	m_device.destroyBuffer(m_readBackBuffer);
+	m_device.freeMemory(m_readBackBufferMemory);
 }
 
 void Engine::init_imgui()

@@ -139,6 +139,9 @@ void Window::run() {
                     case SDLK_y:
 						_scene->CtrY();
                         break;
+                    case SDLK_p:
+						_engine->renderHighResImage(_scene, 1000, 1000);
+						break;
                     case SDLK_s:
                         if (isShiftPressed(mod)) {
 							_editor->saveScene(_scene, true);
@@ -207,6 +210,11 @@ void Window::run() {
         _editor->Gizmo(_scene);
         _editor->SettingsPanel(_scene);
         _editor->MenuBar(_scene);
+
+        if (_editor->getRenderImage()) {
+            _engine->renderHighResImage(_scene, _editor->getImageSize().x, _editor->getImageSize().y);
+            _editor->setRenderImage(false);
+        }
 
 		_scene->UpdateViewport(viewp, float(_width) / float(_height)); 
 

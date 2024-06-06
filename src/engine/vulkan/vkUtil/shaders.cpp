@@ -295,18 +295,18 @@ std::vector<char> vkUtil::prepareShader() {
     return shader;
 }
 
-std::vector<char> vkUtil::endShader() {
-    return LoadShaderResource(IDR_SHADER_RENDER);
+std::vector<char> vkUtil::endShader(bool useForOut) {
+    return LoadShaderResource((useForOut) ? IDR_SHADER_RENDEROUT : IDR_SHADER_RENDER);
 }
 
-vk::ShaderModule vkUtil::createModule(std::string shaderCode, vk::Device device) {
+vk::ShaderModule vkUtil::createModule(std::string shaderCode, vk::Device device, bool useForOut) {
 
     vk::ShaderModuleCreateInfo moduleInfo = {};
     moduleInfo.flags = vk::ShaderModuleCreateFlags();
     std::vector<char> sourceCode = prepareShader();
     std::vector<char> tmp(shaderCode.begin(), shaderCode.end());
     sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
-    tmp = endShader();
+    tmp = endShader(useForOut);
     sourceCode.insert(sourceCode.end(), tmp.begin(), tmp.end());
     
     std::string str(sourceCode.begin(), sourceCode.end());

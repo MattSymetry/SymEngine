@@ -28,12 +28,17 @@ public:
 	void openAddPanel(ImGuiContext* context, Scene* scene);
 	void AddPanel(Scene* scene);
 	bool codeEditorIsActive();
+	bool getRenderImage() {return m_renderImage;}
+	void setRenderImage(bool renderImage) {m_renderImage = renderImage;}
+	glm::vec2 getImageSize() {return m_imageSize;}
 private:
 	glm::vec4 xColor = glm::vec4(0.000f, 1.000f, 0.557f, 1.000f);
 	glm::vec4 yColor = glm::vec4(1.000f, 0.000f, 0.502f, 1.000f);
 	glm::vec4 zColor = glm::vec4(0.478f, 0.000f, 1.000f, 1.000f);
 	int m_transformMode = 0;
 	bool m_isMovingElement = false;
+	bool m_renderImage = false;
+	glm::ivec2 m_imageSize = glm::ivec2(2048, 2048);
 	std::string m_defaultCode = "Please select an object to see and edit its code!";
 	int m_selectedCode = 0;
 	int m_shaderCodeLinesOffset = 0;

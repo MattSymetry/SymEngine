@@ -9,9 +9,9 @@ namespace vkUtil {
     std::vector<uint32_t> compileShaderSourceToSpirv(std::string& shaderSource, const std::string& inputFilename, glslang_stage_t shaderStage, bool onlyCheckCode = false, char** error = nullptr);
     
     std::vector<char> prepareShader();
-    std::vector<char> endShader();
+    std::vector<char> endShader(bool useForOut = false);
 
-	vk::ShaderModule createModule(std::string shaderCode, vk::Device device);
+	vk::ShaderModule createModule(std::string shaderCode, vk::Device device, bool useForOut = false);
     std::string getExecutablePath();
     std::string getExecutableDirectory();
     std::vector<char> LoadShaderResource(UINT resourceID);

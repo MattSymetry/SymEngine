@@ -25,6 +25,7 @@ public:
 	static std::vector<char> LoadEmbeddedFontResource(int resourceID);
 
 	void recompile_shader();
+	void renderHighResImage(Scene* scene, uint32_t width, uint32_t height);
 
 private:
 	Scene* m_scene;
@@ -74,6 +75,16 @@ private:
     vk::CommandPool m_immCommandPool;
     vk::DescriptorPool m_imguiPool;
 
+	// High res render output
+	vk::Image m_highResImage;
+	vk::DeviceMemory m_highResImageMemory;
+	vk::ImageView m_highResImageView;
+	vk::DescriptorSetLayout m_HighResDescriptorSetLayout;
+	vk::PipelineLayout m_HighResPipelineLayout;
+	vk::Pipeline m_HighResComputePipeline;
+	vk::Buffer m_readBackBuffer;
+	vk::DeviceMemory m_readBackBufferMemory;
+
 	//instance setup
 	void make_instance();
     
@@ -97,6 +108,15 @@ private:
 
 	//asset creation
 	void make_assets(Scene* scene);
+
+	// high res out image
+	void createHighResImage(uint32_t width, uint32_t height);
+	void createHgihResComputePipeline(vk::ShaderModule computeShaderModule, Scene* scene);
+	vk::CommandBuffer allocateHighResCommandBuffer(vk::CommandPool commandPool);
+	void dispatchHighResCompute(vk::CommandPool commandPool, vk::Queue computeQueue, vk::DescriptorSet descriptorSet, uint32_t width, uint32_t height);
+	void createReadBackBuffer(vk::DeviceSize size);
+	void readBackHighResImage(vk::CommandPool commandPool, vk::Queue graphicsQueue, vk::Buffer readBackBuffer, uint32_t width, uint32_t height);
+	void saveImageAsPNG(const std::string& filename, const std::vector<uint8_t>& imageData, uint32_t width, uint32_t height);
 
 	void prepare_frame(uint32_t imageIndex, Scene* scene);
 	void prepare_scene(vk::CommandBuffer commandBuffer);
