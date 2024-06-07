@@ -410,10 +410,27 @@ void Engine::readBackHighResImage(vk::CommandPool commandPool, vk::Queue graphic
 }
 
 void Engine::saveImageAsPNG(const std::string& filename, const std::vector<uint8_t>& imageData, uint32_t width, uint32_t height) {
+	std::ofstream file(filename, std::ios::binary);
+	if (!file.is_open()) {
+		std::cout << "Error: Unable to open file for writing: " << filename << std::endl;
+		setPopupText("Error: Unable to open file for writing: " + filename, popupStates::PERROR);
+		return;
+	}
+	file.close();
+	
 	unsigned error = lodepng::encode(filename, imageData, width, height);
 	if (error) {
-		std::cout << "Error encoding PNG: " << lodepng_error_text(error) << std::endl;
+		setPopupText("Error encoding PNG: " + std::string(lodepng_error_text(error)), popupStates::PERROR);
 	}
+	else {
+		setPopupText("Image saved!" , popupStates::PSUCCESS );
+	}
+}
+
+void Engine::setPopupText(std::string text, popupStates state) {
+	popupText = text;
+	popupState = state;
+	showPopup = true;
 }
 
 void Engine::renderHighResImage(Scene* scene, uint32_t width, uint32_t height) {
@@ -437,8 +454,8 @@ void Engine::renderHighResImage(Scene* scene, uint32_t width, uint32_t height) {
 	}
 
 	// check for .png extension
+	std::string saveFileNameStr(saveFileName);
 	if (saveFileName) {
-		std::string saveFileNameStr(saveFileName);
 		if (saveFileNameStr.find(".png") == std::string::npos) {
 			saveFileNameStr += ".png";
 			saveFileName = saveFileNameStr.c_str();
@@ -503,7 +520,7 @@ void Engine::renderHighResImage(Scene* scene, uint32_t width, uint32_t height) {
 	memcpy(highResImageData.data(), mappedMemory, highResImageData.size());
 	m_device.unmapMemory(m_readBackBufferMemory);
 
-	saveImageAsPNG(saveFileName, highResImageData, width, height);
+	saveImageAsPNG(saveFileNameStr, highResImageData, width, height);
 
 	// Clean up
 	m_device.destroyImageView(m_highResImageView);

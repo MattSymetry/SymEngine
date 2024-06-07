@@ -8,3 +8,5 @@ IDR_SHADER_DEF SHADER "../shaders/definitions.comp"
 IDR_SHADER_CSG SHADER "../shaders/csg.comp"
 IDR_SHADER_RENDER SHADER "../shaders/render.comp"
 IDR_SHADER_RENDEROUT SHADER "../shaders/renderOutput.comp"
+
+IDR_SYM_SCENE SYM "Scene.sym"

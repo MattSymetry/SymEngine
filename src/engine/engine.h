@@ -27,6 +27,22 @@ public:
 	void recompile_shader();
 	void renderHighResImage(Scene* scene, uint32_t width, uint32_t height);
 
+	bool isPopupVisible() {
+		return showPopup;
+	}
+
+	std::string getPopupText() {
+		return popupText;
+	}
+
+	void resetPopup() {
+		showPopup = false;
+	}
+
+	popupStates getPopupState() {
+		return popupState;
+	}
+
 private:
 	Scene* m_scene;
 	int m_width;
@@ -34,6 +50,10 @@ private:
 	SDL_Window* m_window;
 	int m_pipelineNumber = 0;
 	std::string m_sceneShaderCode;
+
+	bool showPopup = false;
+	std::string popupText = "";
+	popupStates popupState = popupStates::PSUCCESS;
 
 	//instance-related variables
 	vk::Instance m_instance{ nullptr };
@@ -84,6 +104,8 @@ private:
 	vk::Pipeline m_HighResComputePipeline;
 	vk::Buffer m_readBackBuffer;
 	vk::DeviceMemory m_readBackBufferMemory;
+
+	void setPopupText(std::string text, popupStates state);
 
 	//instance setup
 	void make_instance();

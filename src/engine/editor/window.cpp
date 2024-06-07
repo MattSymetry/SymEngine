@@ -20,6 +20,9 @@ Window::Window(int width, int height, bool debug, std::string filename)
     if (!filename.empty()) {
 		_scene->loadScene(filename);
 	}
+    else {
+		_scene->newScene();
+	}
     
     _engine = new Engine(width, height, _window, _scene);
 
@@ -77,6 +80,7 @@ void Window::run() {
     while (!bQuit)
     {
         openAddPanel = false;
+        bool closeWindowWarning = false;
         // Events
        glm::vec4 viewp = _editor->GetViewport();
        glm::vec4 viewportBounds = glm::vec4(viewp.x, viewp.x + viewp.z, 0.0f, viewp.w);
@@ -114,9 +118,7 @@ void Window::run() {
 
             if (e.type == SDL_QUIT)
             {
-                bQuit = true;
-                render = false;
-               // renderThread.join();
+                closeWindowWarning = true;
             }
             else if (e.type == SDL_KEYDOWN && !ImGui::IsAnyItemActive() && !_editor->codeEditorIsActive())
             {
@@ -214,6 +216,71 @@ void Window::run() {
         if (_editor->getRenderImage()) {
             _engine->renderHighResImage(_scene, _editor->getImageSize().x, _editor->getImageSize().y);
             _editor->setRenderImage(false);
+        }
+
+        if (_engine->isPopupVisible()) {
+            switch (_engine->getPopupState()) {
+                case popupStates::PERROR:
+                    ImGui::OpenPopup("Error");
+                    ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+                    ImGui::Text(_engine->getPopupText().c_str());
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+                    if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                        _engine->resetPopup();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+					break;
+				case popupStates::PSUCCESS:
+                    ImGui::OpenPopup("Success");
+					ImGui::BeginPopupModal("Success", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+					ImGui::Text(_engine->getPopupText().c_str());
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+                    if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+						_engine->resetPopup();
+						ImGui::CloseCurrentPopup();
+					}
+                    ImGui::EndPopup();
+                    break;
+            }
+		}
+
+        if (closeWindowWarning) {
+            if (_scene->hasSceneChanged()) {
+                ImGui::OpenPopup("Unsaved Changes");
+            }
+            else {
+                bQuit = true;
+                render = false;
+                closeWindowWarning = false;
+            }
+        }
+        if (ImGui::BeginPopupModal("Unsaved Changes", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Are you sure you want to close this scene without saving?");
+            ImGui::Spacing();
+            ImGui::Spacing();
+            if (ImGui::Button("Save", ImVec2(ImGui::GetContentRegionAvail().x / 3, 0))) {
+                _editor->saveScene(_scene);
+                bQuit = true;
+                render = false;
+                ImGui::CloseCurrentPopup();
+                closeWindowWarning = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Don't Save", ImVec2(ImGui::GetContentRegionAvail().x / 2, 0))) {
+                bQuit = true;
+                render = false;
+                ImGui::CloseCurrentPopup();
+                closeWindowWarning = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                ImGui::CloseCurrentPopup();
+                closeWindowWarning = false;
+            }
+            ImGui::EndPopup();
         }
 
 		_scene->UpdateViewport(viewp, float(_width) / float(_height)); 

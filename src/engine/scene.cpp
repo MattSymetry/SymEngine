@@ -10,7 +10,7 @@ Scene::Scene(glm::vec4 viewport) : m_sceneGraph(0, false, nullptr, "Scene")
     m_sceneSize = 1; 
     m_sceneGraphNodes.push_back(&m_sceneGraph);
     float aspect = viewport.z / viewport.w;
-    m_camera = Camera(glm::vec3(-2.0f, 2.0f, 2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
+    m_camera = Camera(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0,0.0,0.0), 0.0f, 90.0f, aspect);
     description = {}; 
     description.mousePos = glm::ivec2(400, 400);
     description.camera_position = m_camera.getPosition();
@@ -270,17 +270,53 @@ void Scene::saveScene(std::string filename) {
 
 }
 
+std::vector<char> LoadSymResource(UINT resourceID) {
+    HRSRC hRes = FindResource(NULL, MAKEINTRESOURCE(resourceID), TEXT("SYM"));
+    if (hRes == NULL) {
+        std::cerr << "Failed to find resource." << std::endl;
+        return std::vector<char>();
+    }
+    HGLOBAL hResData = LoadResource(NULL, hRes);
+    if (hResData == NULL) {
+        std::cerr << "Failed to load resource." << std::endl;
+        return std::vector<char>();
+    }
+    DWORD dataSize = SizeofResource(NULL, hRes);
+    void* pResData = LockResource(hResData);
+    if (pResData == NULL) {
+        std::cerr << "Failed to lock resource." << std::endl;
+        return std::vector<char>();
+    }
+    return std::vector<char>(static_cast<char*>(pResData), static_cast<char*>(pResData) + dataSize);
+}
+
+// Function to load scene data from .sym resource
+template <typename T>
+void LoadSceneDataFromResource(UINT resourceID, T& sceneData) {
+    std::vector<char> symData = LoadSymResource(resourceID);
+    if (symData.empty()) {
+        std::cerr << "Failed to load .sym resource data." << std::endl;
+        return;
+    }
+
+    std::istringstream is(std::string(symData.begin(), symData.end()), std::ios::binary);
+    cereal::BinaryInputArchive archive(is);
+    archive(sceneData);
+}
+
 void Scene::loadScene(std::string filename) {
     m_filename = filename;
     std::ifstream is(filename, std::ios::binary);
     cereal::BinaryInputArchive archive(is);
     archive(m_sceneData);
-    m_tmpSceneData = m_sceneData;
     m_sceneSize = m_sceneData.sceneSize;
     for (int i = 0; i < m_sceneSize; i++) {
         m_nodeData[i] = m_sceneData.nodeData[i];
     }
     RecreateScene();
+    m_tmpSceneData = m_sceneData;
+    undoStack = UndoStack(m_maxUndoRedo);
+    redoStack = UndoStack(m_maxUndoRedo);
 } 
 
 void Scene::RecreateScene(SceneData* data) {
@@ -777,21 +813,13 @@ void Scene::newScene() {
             RemoveSceneGraphNode(child, false);
         }
     }
-	m_sceneGraph = SceneGraphNode(0, false, nullptr, "Scene");
-    m_sceneGraph.setId(0);
-	m_sceneGraphNodes.clear();
-	m_sceneGraphNodes.push_back(&m_sceneGraph);
-	m_idCounter = 0;
-	m_selectedObjectId = 0;
-    setAA(1);
-    showGrid(1);
-    setBackgroundColor(glm::vec4(0.01f, 0.01f, 0.01f, 1.0f));
-    setSunPosition(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-    setOutlineThickness(0.0f);
-    setOutlineColor(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-    setCameraPosition(glm::vec3(-2.0f, 2.0f, 2.0f));
-	m_sceneSize = 1;
-	updateNodeData(false);
+    LoadSceneDataFromResource(IDR_SYM_SCENE, m_sceneData);
+    m_sceneSize = m_sceneData.sceneSize;
+    for (int i = 0; i < m_sceneSize; i++) {
+        m_nodeData[i] = m_sceneData.nodeData[i];
+    }
+    RecreateScene();
+    m_tmpSceneData = m_sceneData;
     undoStack = UndoStack(m_maxUndoRedo);
     redoStack = UndoStack(m_maxUndoRedo);
     m_filename = "";

@@ -34,6 +34,13 @@ enum class pipelineType {
     COMPUTE2
 };
 
+enum class popupStates {
+	PSUCCESS,
+    PERROR,
+    PWARNING,
+    PSAVING
+};
+
 // String Processing functions
 
 std::vector<std::string> split(std::string line, std::string delimiter);
