@@ -27,3 +27,7 @@ target_link_libraries(SYMYS vma glm imgui ImGuizmo glslang SPIRV OGLCompiler HLS
 target_link_libraries(SYMYS Vulkan::Vulkan sdl2)
 
 add_dependencies(SYMYS Shaders)
+
+if(WIN32)
+    set_target_properties(SYMYS PROPERTIES WIN32_EXECUTABLE ON)
+endif()
