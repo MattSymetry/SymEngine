@@ -464,9 +464,11 @@ void Editor::getInspector(Scene* scene)
             ImGui::Separator();
             ImGui::Spacing();
 
+            bool deleted = false;
+
             if (node->getId() != 0)
             {
-                if (ImGui::Button(ICON_LC_TRASH_2 " Delete", ImVec2(avail, 0))) { scene->RemoveSceneGraphNode(node); }
+                if (ImGui::Button(ICON_LC_TRASH_2 " Delete", ImVec2(avail, 0))) { deleted = true; }
 
 
                 ImGui::Spacing();
@@ -772,6 +774,10 @@ void Editor::getInspector(Scene* scene)
                 if (ImGui::Checkbox("##ZMirror", &mirrorZ)) { node->setMirrorZ(mirrorZ); hasChanges = true; scene->needsRecompilation = true;}
 
             }
+            if (deleted) {
+				scene->RemoveSceneGraphNode(node);
+                hasChanges = true;
+			}
             if (hasChanges) scene->performAction(scene->CreateSnapshot(false));
 		}
     }

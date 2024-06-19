@@ -55,14 +55,17 @@ void Scene::InitShapes() {
 	AddShape("sdSphere", R"(
 float sdSphere( vec3 position, float radius )
 {
-	//float t = time / 2.0;
-	//radius += 0.008*sin(t + position.x*50)+0.008*sin(t + position.y*50)+0.008*sin(t + position.z*50);
+	//float height = 0.006;
+	//float size = 60.0;
+	//radius += height*sin(position.x*size);
+	//radius += height*sin(time+position.y*size);
+	//radius += height*sin(time+position.z*size); 
     return length(position)-radius; 
 }
 )", Type::Sphere);
 
 	AddShape("sdRoundBox", R"(
-float sdRoundBox( vec3 p, vec3 b, float r )
+float sdRoundBox( vec3 p, vec3 b, float r ) 
 {
     vec3 q = abs(p) - b + r;
     return length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0) - r;
@@ -154,7 +157,7 @@ std::string Scene::getShapeNameById(float id, Type type) {
 
 void Scene::KeyPressed(SDL_Keycode key) {
     // check if delete key is pressed
-    if (key == SDLK_DELETE) {
+    if (key == SDLK_DELETE || key == SDLK_BACKSPACE) {
 		SceneGraphNode* node = GetSelectedNode();
 		if (node && node->getId() > 0) {
 			RemoveSceneGraphNode(node);
